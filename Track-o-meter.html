@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WFO Tracker & Insights</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --sidebar-bg: #1a1a1a;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #333333;
+            --min-hours: 6;
+            --target-days: 3;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Modern Slim-Default Hover Sidebar Style Framework */
+        .sidebar { 
+            width: 65px; 
+            background-color: var(--sidebar-bg); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            padding: 1rem 0.5rem; 
+            flex-shrink: 0; 
+            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            z-index: 100; 
+            overflow: hidden;
+        }
+        .sidebar:hover { 
+            width: 260px; 
+        }
+        .sidebar-brand { display: flex; align-items: center; padding: 0.5rem 0.75rem; margin-bottom: 2rem; gap: 15px; }
+        .sidebar-brand h2 { color: #fff; font-size: 1.2rem; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; }
+        .sidebar:hover .sidebar-brand h2 { opacity: 1; }
+        .brand-icon { font-size: 1.3rem; min-width: 32px; text-align: center; }
+        
+        .nav-menu { display: flex; flex-direction: column; gap: 0.5rem; }
+        .nav-item { display: flex; align-items: center; padding: 0.75rem 0.75rem; border-radius: 8px; color: var(--text-muted); text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.2s; gap: 15px; }
+        .nav-item:hover { background: #252525; color: #fff; }
+        .nav-item.active { background: var(--primary); color: #fff; }
+        .nav-label { opacity: 0; white-space: nowrap; transition: opacity 0.15s ease; pointer-events: none; }
+        .sidebar:hover .nav-label { opacity: 1; pointer-events: auto; }
+        .sidebar-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+        
+        .sidebar-bottom .btn { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            padding: 0.75rem; 
+            overflow: hidden; 
+            max-width: 100%;
+            justify-content: flex-start;
+        }
+        .btn-text { opacity: 0; white-space: nowrap; transition: opacity 0.15s ease; }
+        .sidebar:hover .btn-text { opacity: 1; }
+
+        /* Main Workspace Framework bounding */
+        .main-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; position: relative; }
+        .main-content { padding: 2rem; overflow-y: auto; flex-grow: 1; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        header { margin-bottom: 2rem; }
+        h1 { font-size: 1.8rem; font-weight: 600; color: #fff; }
+
+        /* Toast notifications stack */
+        .toast-stack { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+        .toast { background: #2a2a2a; border: 1px solid var(--border); border-left: 4px solid var(--primary); color: var(--text-color); padding: 0.75rem 1.1rem; border-radius: 8px; font-size: 0.9rem; max-width: 340px; pointer-events: all; box-shadow: 0 4px 16px rgba(0,0,0,0.4); animation: slideIn 0.25s ease; display: flex; align-items: center; gap: 0.6rem; }
+        .toast.success { border-left-color: var(--success); }
+        .toast.warning { border-left-color: var(--warning); }
+        .toast.danger  { border-left-color: var(--danger); }
+        .toast-close { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0 0 0.5rem; }
+        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(120%); } }
+
+        /* Undo block alert structures */
+        .undo-banner { background-color: rgba(59, 130, 246, 0.2); border: 1px dashed var(--primary); color: #fff; padding: 0.75rem 1rem; border-radius: 8px; display: none; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; }
+        .undo-link { color: var(--primary); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 10px; }
+
+        /* Grid Framework blocks */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; position: relative; }
+        .card-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 1.2rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Operational Timer view components */
+        .timer-box { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; }
+        .status-badge { padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; }
+        .status-badge.out { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+        .status-badge.in  { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+        .time-display { font-size: 3.2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 0.25rem; cursor: pointer; transition: color 0.2s; }
+        .time-display:hover { color: var(--primary); }
+        .timer-mode-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        .target-display { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .arrival-display { font-size: 0.9rem; color: var(--success); font-weight: 600; margin-bottom: 1.5rem; }
+        .btn { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; width: 100%; max-width: 250px; text-align: center; white-space: nowrap; }
+        .btn-primary   { background-color: var(--primary); color: white; }
+        .btn-primary:hover  { background-color: #2563eb; }
+        .btn-danger    { background-color: var(--danger); color: white; }
+        .btn-danger:hover   { background-color: #dc2626; }
+        .btn-secondary { background-color: #333; color: var(--text-color); font-size: 0.85rem; padding: 0.4rem 1rem; width: auto; border: 1px solid #444; }
+        .btn-secondary:hover { background-color: #444; }
+
+        /* Transit parameter offset modifications inputs */
+        .offset-container { margin-top: 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; background: #252525; padding: 0.75rem; border-radius: 8px; width: 100%; max-width: 270px; font-size: 0.85rem; border: 1px solid #333; }
+        .offset-row { display: flex; align-items: center; gap: 0.4rem; width: 100%; justify-content: center; position: relative; flex-wrap: wrap; }
+        .offset-container input { background: #333; border: 1px solid #444; color: #fff; padding: 0.2rem; border-radius: 4px; text-align: center; }
+        .input-mins { width: 45px; }
+        .input-time { width: 85px; font-size: 0.8rem; }
+        .chip-group { display: flex; gap: 0.35rem; margin-top: 0.25rem; }
+        .chip { background: #333; border: 1px solid #444; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+        .chip:hover, .chip.active { background: #444; color: #fff; border-color: var(--primary); }
+
+        /* Information Tooltips boxes */
+        .info-icon { background: #333; border: 1px solid #444; border-radius: 50%; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; color: var(--text-muted); cursor: help; position: relative; transition: all 0.2s; }
+        .info-icon:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .tooltip-box { position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background: #000; color: #e0e0e0; width: 240px; padding: 0.75rem; border-radius: 6px; border: 1px solid #444; font-size: 0.75rem; line-height: 1.35; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease; z-index: 1000; font-weight: normal; }
+        .tooltip-box::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 6px; border-style: solid; border-color: #000 transparent transparent transparent; }
+        .info-icon:hover .tooltip-box { opacity: 1; visibility: visible; }
+
+        /* Metric Dashboard Insights grid panels rows style properties */
+        .insight-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between;}
+        .insight-row:last-child { border-bottom: none; }
+        .insight-val { font-weight: 600; }
+        .text-success { color: var(--success); }
+        .text-warning { color: var(--warning); }
+        .text-danger  { color: var(--danger); }
+
+        /* Calendar render box elements configurations layout */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .calendar-day-name { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; padding-bottom: 4px; }
+        .calendar-cell { background: #252525; border-radius: 4px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; border: 1px solid transparent; color: var(--text-muted); cursor: pointer; transition: transform 0.1s; }
+        .calendar-cell:hover:not(.empty) { transform: scale(1.05); background: #333; }
+        .calendar-cell.empty { background: transparent; border: none; cursor: default; }
+        .calendar-cell.current-month { color: var(--text-color); background: #2a2a2a; }
+        .calendar-cell.wfo-valid { background: rgba(16, 185, 129, 0.2); border-color: var(--success); color: var(--success); font-weight: bold; }
+        .calendar-cell.wfo-invalid { background: rgba(245, 158, 11, 0.2); border-color: var(--warning); color: var(--warning); }
+        .calendar-cell.selected-day { border: 2px solid var(--primary) !important; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+        .calendar-hours-hint { font-size: 0.55rem; margin-top: 1px; opacity: 0.8; display: block; font-weight: normal; }
+
+        /* ─── NEW Premium Vertical Visual Delivery-Style Timeline Layout ─── */
+        .timeline-container { display: flex; flex-direction: column; padding: 0.5rem 0.5rem 0.5rem 1rem; position: relative; margin-top: 0.5rem; height: 100%; min-height: 140px; justify-content: center; }
+        .timeline-track { position: absolute; top: 1.5rem; bottom: 1.5rem; left: 1.55rem; width: 3px; background: #2d2d2d; transition: background 0.3s; }
+        .timeline-track.valid-line { background: var(--success); }
+        .timeline-track.invalid-line { background: var(--warning); }
+        
+        .timeline-step { display: flex; align-items: flex-start; margin-bottom: 1.2rem; position: relative; gap: 15px; }
+        .timeline-step:last-child { margin-bottom: 0; }
+        .timeline-node { width: 20px; height: 20px; border-radius: 50%; background: #2a2a2a; border: 2px solid #444; display: flex; align-items: center; justify-content: center; z-index: 2; font-size: 0.65rem; font-weight: bold; transition: all 0.3s; color: transparent; flex-shrink: 0; }
+        .timeline-step.completed .timeline-node { background: #121212; border-color: var(--success); color: var(--success); }
+        .timeline-step.short-completed .timeline-node { background: #121212; border-color: var(--warning); color: var(--warning); }
+        
+        .timeline-content { display: flex; flex-direction: column; }
+        .timeline-header-lbl { font-size: 0.95rem; font-weight: 600; color: #fff; }
+        .timeline-sub-lbl { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+        .timeline-date-title { font-size: 1.05rem; font-weight: 600; color: var(--primary); margin-bottom: 1rem; text-align: left; text-transform: capitalize; }
+
+        /* Multi Year selector timeline layout block styling */
+        .year-selector-bar { display: flex; gap: 0.5rem; background: #1a1a1a; padding: 0.4rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border); max-width: fit-content; flex-wrap: wrap; }
+        .year-tab-btn { padding: 0.5rem 1.2rem; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); background: transparent; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .year-tab-btn:hover { color: #fff; background: #252525; }
+        .year-tab-btn.active { background: #333; color: var(--primary); border: 1px solid #444; }
+        .year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .mini-calendar-title { font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.75rem; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+
+        /* Table */
+        .inline-edit-input { background: #2d2d2d; border: 1px solid #444; color: #fff; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9rem; max-width: 110px; }
+        .inline-edit-input[type="time"] { max-width: 90px; }
+        .action-link-group { display: flex; gap: 8px; }
+        .action-link { background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
+        .action-edit   { color: var(--primary); }
+        .action-delete { color: var(--danger); }
+        .action-save   { color: var(--success); font-weight: bold; }
+        .action-cancel { color: var(--text-muted); }
+        .table-container { overflow-x: auto; margin-top: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; }
+        th, td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 500; text-transform: uppercase; font-size: 0.8rem; }
+        .tag { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .tag-valid   { background: rgba(16, 119, 129, 0.15); color: var(--success); }
+        .tag-invalid { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .flex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .manual-panel { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; background: #252525; padding: 0.75rem; border-radius: 8px; border: 1px dashed #444; flex-wrap: wrap; }
+        .manual-panel input { background: #333; border: 1px solid #444; color: #fff; padding: 0.3rem; border-radius: 4px; }
+
+        /* Configuration systems Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+        .modal-box { background: #1e1e1e; border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 90%; max-width: 460px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-header h3 { font-size: 1.1rem; color: #fff; }
+        .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+        .settings-row:last-of-type { border-bottom: none; }
+        .settings-label { font-size: 0.9rem; color: var(--text-color); }
+        .settings-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+        .settings-input { background: #2d2d2d; border: 1px solid #444; color: #fff; padding: 0.35rem 0.6rem; border-radius: 6px; width: 70px; text-align: center; font-size: 0.95rem; }
+
+        .sync-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .sync-tab { padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+        .sync-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .sync-panel { display: none; }
+        .sync-panel.active { display: block; }
+        #qrcode { display: flex; justify-content: center; margin: 1rem 0; }
+        #qrcode canvas, #qrcode img { border-radius: 8px; border: 8px solid #fff; }
+        .qr-hint { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
+        .import-textarea { width: 100%; height: 120px; background: #252525; border: 1px solid var(--border); color: var(--text-color); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.78rem; resize: vertical; }
+        .import-textarea::placeholder { color: #555; }
+
+        @media (max-width: 640px) {
+            body { flex-direction: column; }
+            .sidebar { display: none !important; }
+            .main-wrapper { height: calc(100vh - 60px); }
+            .main-content { padding: 1rem; }
+            .grid { grid-template-columns: 1fr !important; gap: 1rem; }
+            .time-display { font-size: 2.6rem; }
+            .mobile-nav { display: flex !important; }
+            header { padding-left: 0 !important; }
+        }
+        .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--sidebar-bg); border-top: 1px solid var(--border); z-index: 200; }
+        .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--text-muted); cursor: pointer; font-size: 0.65rem; transition: color 0.2s; border: none; background: none; }
+        .mobile-nav-item.active { color: var(--primary); }
+        .mobile-nav-item span:first-child { font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+    <div class="toast-stack" id="toastStack"></div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>⚙️ Settings</h3>
+                <button class="modal-close" onclick="closeModal('settingsModal')">×</button>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Minimum hours per day</div>
+                    <div class="settings-sub">Hours needed for a valid WFO day</div>
+                </div>
+                <input type="number" class="settings-input" id="settingMinHours" min="1" max="12" value="6">
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Target WFO days per week</div>
+                    <div class="settings-sub">Used for streak and run-rate calculations</div>
+                </div>
+                <input type="number" class="settings-input" id="settingTargetDays" min="1" max="7" value="3">
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Office coordinates</div>
+                    <div class="settings-sub">For geofence punch-in check</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                <div style="flex:1">
+                    <label style="font-size:0.75rem; color:var(--text-muted);">Latitude</label>
+                    <input type="number" step="0.00001" class="settings-input" id="settingLat" style="width:100%;" value="17.44832">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:0.75rem; color:var(--text-muted);">Longitude</label>
+                    <input type="number" step="0.00001" class="settings-input" id="settingLon" style="width:100%;" value="78.37411">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:0.75rem; color:var(--text-muted);">Radius (km)</label>
+                    <input type="number" step="0.1" class="settings-input" id="settingRadius" style="width:100%;" value="0.5">
+                </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top:0.5rem;" onclick="saveSettings()">Save Settings</button>
+            <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Danger zone</div>
+                <button class="btn btn-danger" style="width:100%; font-size:0.85rem; padding:0.5rem;" onclick="clearAllData()">🗑️ Clear All Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="syncModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>📱 Sync to Mobile</h3>
+                <button class="modal-close" onclick="closeModal('syncModal')">×</button>
+            </div>
+            <div class="sync-tabs">
+                <button class="sync-tab active" onclick="switchSyncTab('export', event)">Export (this device)</button>
+                <button class="sync-tab" onclick="switchSyncTab('import', event)">Import (paste data)</button>
+            </div>
+            <div id="syncExport" class="sync-panel active">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.5;">
+                    Save this HTML file on your phone, then scan the QR code below with your phone camera. Your data will load automatically.
+                </p>
+                <div id="qrcode"></div>
+                <div class="qr-hint">
+                    Scan with your phone camera → opens the app → data auto-imports.<br>
+                    Works 100% offline. No account needed.
+                </div>
+                <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem;">Or copy this data string manually:</div>
+                    <textarea class="import-textarea" id="exportDataBox" readonly style="height:80px;"></textarea>
+                    <button class="btn btn-secondary" style="margin-top:0.5rem; width:100%;" onclick="copyExportData()">📋 Copy to clipboard</button>
+                </div>
+            </div>
+            <div id="syncImport" class="sync-panel">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.5;">
+                    Paste the data string exported from another device. This will <strong style="color:var(--warning);">merge</strong> records (existing entries are kept; only new dates are added).
+                </p>
+                <textarea class="import-textarea" id="importDataBox" placeholder="Paste your exported data string here…"></textarea>
+                <button class="btn btn-primary" style="width:100%; margin-top:0.75rem;" onclick="importData()">Import & Merge</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="appSidebar" class="sidebar">
+        <div class="sidebar-top">
+            <div class="sidebar-brand">
+                <span class="brand-icon">🏢</span>
+                <h2>WFO Tracker</h2>
+            </div>
+            <nav class="nav-menu">
+                <div id="navDash"    class="nav-item active" onclick="switchTab('dashboardTab')"><span class="brand-icon">📊</span><span class="nav-label">Dashboard</span></div>
+                <div id="navArchive" class="nav-item"        onclick="switchTab('yearTab')"><span class="brand-icon">📅</span><span class="nav-label">Yearly Archive</span></div>
+            </nav>
+        </div>
+        <div class="sidebar-bottom sidebar-actions">
+            <button class="btn btn-secondary" onclick="openSyncModal()"><span class="brand-icon">📱</span><span class="btn-text">Sync to Mobile</span></button>
+            <button class="btn btn-secondary" onclick="exportToCSV()"><span class="brand-icon">💾</span><span class="btn-text">Export CSV</span></button>
+            <button class="btn btn-secondary" onclick="openModal('settingsModal')"><span class="brand-icon">⚙️</span><span class="btn-text">Settings</span></button>
+        </div>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="main-content">
+
+            <div class="undo-banner" id="globalUndoBanner">
+                <span>Session logged successfully. Caught in a sudden departure delay?</span>
+                <span class="undo-link" onclick="executeUndoPunchOut()">[Undo Punch Out]</span>
+            </div>
+
+            <div id="dashboardTab" class="tab-content active">
+                <header style="margin-bottom: 1.5rem;">
+                    <h1>Active WFO Workspace</h1>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;" id="policySubtitle">Complies with 3 days/week and 6hr minimum daily thresholds</p>
+                </header>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="timer-box">
+                            <div id="statusBadge" class="status-badge out">OUT OF OFFICE</div>
+                            <div id="timeDisplay" class="time-display" onclick="toggleTimerViewMode()">00:00:00</div>
+                            <div id="timerModeLabel" class="timer-mode-label">Elapsed Mode</div>
+                            <div id="targetDisplay" class="target-display">Punch in to initiate daily counter.</div>
+                            <div id="liveArrivalDisplay" class="arrival-display" style="display:none;"></div>
+                            <button id="actionBtn" class="btn btn-primary" onclick="togglePunch()">Punch In</button>
+                            
+                            <div id="offsetWrapper" class="offset-container">
+                                <div class="offset-row">
+                                    <label for="transitMinutes">Offset (Mins):</label>
+                                    <input type="number" id="transitMinutes" class="input-mins" value="5" min="0" max="60" oninput="recalcApproxArrival()">
+                                    
+                                    <label for="approxTimeInput" style="margin-left:5px;">Or Arrived At:</label>
+                                    <input type="text" id="approxTimeInput" class="input-time" placeholder="e.g. 09:15 AM" oninput="recalcApproxArrival()">
+                                    
+                                    <div class="info-icon">i
+                                        <div class="tooltip-box">
+                                            <strong>How does Offset work?</strong><br>
+                                            Type minutes left ago, OR type a raw timestamp (e.g. 9:15 AM). The system backdates your session start time perfectly.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="chip-group">
+                                    <div class="chip" onclick="setOffsetChipValue(0, event)">0m</div>
+                                    <div class="chip active" id="defaultChip" onclick="setOffsetChipValue(5, event)">5m</div>
+                                    <div class="chip" onclick="setOffsetChip(7, event)">7m</div>
+                                    <div class="chip" onclick="setOffsetChip(10, event)">10m</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Analytics Engine Metrics</div>
+                        <div class="insight-row">
+                            <span>Valid Days This Month:</span>
+                            <span id="monthValidDays" class="insight-val text-success">0 / 12 Days</span>
+                        </div>
+                        <div class="insight-row">
+                            <span>Total Accumulated Hours:</span>
+                            <span id="monthTotalHours" class="insight-val">0.0 hrs</span>
+                        </div>
+                        <div class="insight-row">
+                            <span>WFO Frequency Run Rate:</span>
+                            <span id="runRateRequired" class="insight-val text-success">3.0 days / week</span>
+                        </div>
+                        <div class="insight-row">
+                            <span>Current Week Progress:</span>
+                            <div>
+                                <span id="currentWeekDays" class="insight-val">0 / 3 valid days</span>
+                                <div><span id="weekRemainingBadge" class="week-badge"></span></div>
+                            </div>
+                        </div>
+                        <div class="insight-row">
+                            <span>Weekly Consistency Streak:</span>
+                            <span id="complianceStreak" class="insight-val" style="color:var(--warning);">🔥 0 Weeks</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid" style="grid-template-columns: 1.2fr 0.8fr;">
+                    <div class="card">
+                        <div id="calendarMonthLabel" style="font-weight:600; text-align:center; margin-bottom:1rem;">Month View</div>
+                        <div class="calendar-grid" id="dashboardCalendarGrid"></div>
+                    </div>
+                    
+                    <div class="card" style="display:flex; flex-direction:column; justify-content:flex-start;">
+                        <div class="card-title" style="margin-bottom: 0.5rem;">Daily Status Timeline</div>
+                        <div class="timeline-container" id="timelineLogViewPanel">
+                            </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:1.5rem;">
+                    <div class="flex-header">
+                        <div class="card-title" style="margin-bottom:0;">WFO Log History</div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" style="font-size:0.75rem;" onclick="toggleManualLog()">+ Forgot to Punch?</button>
+                        </div>
+                    </div>
+                    <div id="manualLogPanel" class="manual-panel" style="display:none;">
+                        <label>Date: <input type="date" id="manualDate"></label>
+                        <label>In: <input type="time" id="manualIn"></label>
+                        <label>Out: <input type="time" id="manualOut"></label>
+                        <button class="btn btn-primary" style="padding:0.3rem 1rem; width:auto;" onclick="submitManualLog()">Save Log</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th><th>Punch In</th><th>Punch Out</th><th>Total Hours</th><th>Status</th><th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="yearTab" class="tab-content">
+                <header>
+                    <h1>Yearly Calendar Matrix</h1>
+                    <p style="color:var(--text-muted); font-size:0.9rem;">Rolling multi-year macro-level compliance view</p>
+                </header>
+                <div class="year-selector-bar" id="yearSelectorBar"></div>
+                <div class="year-grid" id="yearlyCalendarContainer"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <nav class="mobile-nav" id="mobileNav">
+        <button class="mobile-nav-item active" id="mobileNavDash" onclick="switchTab('dashboardTab'); setMobileActive(this)">
+            <span>📊</span><span>Dashboard</span>
+        </button>
+        <button class="mobile-nav-item" id="mobileNavYear" onclick="switchTab('yearTab'); setMobileActive(this)">
+            <span>📅</span><span>Archive</span>
+        </button>
+        <button class="mobile-nav-item" onclick="openSyncModal()">
+            <span>📱</span><span>Sync</span>
+        </button>
+        <button class="mobile-nav-item" onclick="openModal('settingsModal')">
+            <span>⚙️</span><span>Settings</span>
+        </button>
+    </nav>
+
+<script>
+    // ── State ────────────────────────────────────────────────────────────────
+    let db = [];
+    let activeStart = null;
+    let lastDeletedUndoCache = null;
+    let liveTimerInterval;
+    let selectedActiveYear = new Date().getFullYear();
+    let timerCountdownMode = false;
+    let editingRowDateKey = null;
+    let activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0]; // Tracks target item active display token
+
+    // ── Settings ─────────────────────────────────────────────────────────────
+    let settings = {};
+    function loadSettings() {
+        const defaults = { minHours: 6, targetDaysPerWeek: 3, targetDaysPerMonth: 12, lat: 17.44832, lon: 78.37411, radiusKm: 0.5 };
+        try { settings = Object.assign({}, defaults, JSON.parse(localStorage.getItem('wfo_settings') || '{}')); }
+        catch(e) { settings = defaults; }
+        document.getElementById('settingMinHours').value = settings.minHours;
+        document.getElementById('settingTargetDays').value = settings.targetDaysPerWeek;
+        document.getElementById('settingLat').value = settings.lat;
+        document.getElementById('settingLon').value = settings.lon;
+        document.getElementById('settingRadius').value = settings.radiusKm;
+        document.getElementById('policySubtitle').textContent =
+            `Complies with ${settings.targetDaysPerWeek} days/week and ${settings.minHours}hr minimum daily thresholds`;
+    }
+    function saveSettings() {
+        settings.minHours = parseFloat(document.getElementById('settingMinHours').value) || 6;
+        settings.targetDaysPerWeek = parseInt(document.getElementById('settingTargetDays').value) || 3;
+        settings.targetDaysPerMonth = settings.targetDaysPerWeek * 4;
+        settings.lat = parseFloat(document.getElementById('settingLat').value);
+        settings.lon = parseFloat(document.getElementById('settingLon').value);
+        settings.radiusKm = parseFloat(document.getElementById('settingRadius').value);
+        localStorage.setItem('wfo_settings', JSON.stringify(settings));
+        closeModal('settingsModal');
+        db = db.map(item => ({ ...item, isValidWFODay: item.totalHours >= settings.minHours }));
+        localStorage.setItem('wfo_history', JSON.stringify(db));
+        document.getElementById('policySubtitle').textContent =
+            `Complies with ${settings.targetDaysPerWeek} days/week and ${settings.minHours}hr minimum daily thresholds`;
+        updateUI();
+        showToast('Settings saved', 'success');
+    }
+    function clearAllData() {
+        if (confirm('Delete ALL WFO logs permanently? This cannot be undone.')) {
+            localStorage.removeItem('wfo_history');
+            localStorage.removeItem('wfo_active_start');
+            db = []; activeStart = null; clearInterval(liveTimerInterval);
+            updateUI(); closeModal('settingsModal');
+            showToast('All data cleared', 'danger');
+        }
+    }
+
+    // ── Toast messages block alert element triggers ──────────────────────────
+    function showToast(msg, type = 'info', duration = 4000) {
+        const stack = document.getElementById('toastStack');
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        t.innerHTML = `<span>${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">×</button>`;
+        stack.appendChild(t);
+        setTimeout(() => { t.style.animation = 'fadeOut 0.3s ease forwards'; setTimeout(() => t.remove(), 300); }, duration);
+    }
+
+    // ── Modal windows panel control handlers ──────────────────────────────────
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.addEventListener('click', e => {
+        ['settingsModal','syncModal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.classList.contains('open') && e.target === el) closeModal(id);
+        });
+    });
+
+    // ── Device sync QR arrays matrix encoders handlers ────────────────────────
+    function openSyncModal() {
+        openModal('syncModal');
+        const payload = btoa(unescape(encodeURIComponent(JSON.stringify(db))));
+        document.getElementById('exportDataBox').value = payload;
+
+        const qrDiv = document.getElementById('qrcode');
+        qrDiv.innerHTML = '';
+        const fileUrl = location.href.split('?')[0].split('#')[0];
+        const qrData = fileUrl + '?wfoimport=' + payload;
+
+        if (typeof QRCode !== 'undefined') {
+            if (qrData.length > 2953) {
+                qrDiv.innerHTML = '<div style="color:var(--warning);font-size:0.85rem;text-align:center;padding:1rem;">Dataset too large for QR. Use the copy-paste method below instead.</div>';
+            } else {
+                new QRCode(qrDiv, { text: qrData, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+            }
+        } else {
+            qrDiv.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem;">QR library loading… use the copy-paste method below.</div>';
+        }
+    }
+    function switchSyncTab(tab, ev) {
+        document.querySelectorAll('.sync-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.sync-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('sync' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        ev.target.classList.add('active');
+    }
+    function copyExportData() {
+        const box = document.getElementById('exportDataBox');
+        navigator.clipboard.writeText(box.value).then(() => showToast('Copied to clipboard!', 'success')).catch(() => {
+            box.select(); document.execCommand('copy'); showToast('Copied!', 'success');
+        });
+    }
+    function importData() {
+        const raw = document.getElementById('importDataBox').value.trim();
+        if (!raw) { showToast('Paste your data string first', 'warning'); return; }
+        try {
+            const incoming = JSON.parse(decodeURIComponent(escape(atob(raw))));
+            if (!Array.isArray(incoming)) throw new Error('Invalid format');
+            let added = 0;
+            incoming.forEach(item => {
+                if (!db.find(e => e.date === item.date)) { db.push(item); added++; }
+            });
+            db.sort((a,b) => new Date(b.date) - new Date(a.date));
+            localStorage.setItem('wfo_history', JSON.stringify(db));
+            updateUI(); closeModal('syncModal');
+            showToast(`Imported ${added} new record${added !== 1 ? 's' : ''}`, 'success');
+        } catch(e) { showToast('Invalid data string — check you copied the full text', 'danger'); }
+    }
+    function checkUrlImport() {
+        const params = new URLSearchParams(location.search);
+        const payload = params.get('wfoimport');
+        if (!payload) return;
+        history.replaceState({}, '', location.pathname);
+        try {
+            const incoming = JSON.parse(decodeURIComponent(escape(atob(payload))));
+            if (!Array.isArray(incoming)) return;
+            let added = 0;
+            incoming.forEach(item => {
+                if (!db.find(e => e.date === item.date)) { db.push(item); added++; }
+            });
+            db.sort((a,b) => new Date(b.date) - new Date(a.date));
+            localStorage.setItem('wfo_history', JSON.stringify(db));
+            updateUI();
+            showToast(`📱 Sync complete — ${added} new record${added !== 1 ? 's' : ''} imported`, 'success', 6000);
+        } catch(e) { showToast('QR import failed — data may be corrupted', 'danger'); }
+    }
+
+    // ── Application initialization engine functions pipeline ──────────────────
+    function init() {
+        loadSettings();
+        try { db = JSON.parse(localStorage.getItem('wfo_history')) || []; } catch(e) { db = []; }
+        activeStart = localStorage.getItem('wfo_active_start');
+
+        if (activeStart) {
+            const startDate = new Date(parseInt(activeStart)).toDateString();
+            if (startDate !== new Date().toDateString()) {
+                showToast('Unclosed session from a previous day found. Please log yesterday manually.', 'warning', 8000);
+                clearActiveState();
+            }
+        }
+        buildYearSelector();
+        checkUrlImport();
+        updateUI();
+        if (activeStart) startLiveTimer();
+        recalcApproxArrival();
+    }
+
+    // ── Routing interfaces ────────────────────────────────────────────────────
+    function setMobileActive(el) {
+        document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+    }
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if (tabId === 'dashboardTab') document.getElementById('navDash').classList.add('active');
+        else if (tabId === 'yearTab')  { document.getElementById('navArchive').classList.add('active'); renderYearlyArchive(); }
+    }
+
+    // ── Multi year selectors timelines matrices grids panels renderer ──────────
+    function buildYearSelector() {
+        const bar = document.getElementById('yearSelectorBar');
+        const cy = new Date().getFullYear();
+        bar.innerHTML = '';
+        for (let y = cy; y <= cy + 4; y++) {
+            const btn = document.createElement('button');
+            btn.className = 'year-tab-btn' + (y === selectedActiveYear ? ' active' : '');
+            btn.textContent = y;
+            btn.onclick = () => changeSelectedYear(y, btn);
+            bar.appendChild(btn);
+        }
+    }
+    function changeSelectedYear(year, el) {
+        document.querySelectorAll('.year-tab-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active'); selectedActiveYear = year; renderYearlyArchive();
+    }
+
+    // ── Timer configurations ──────────────────────────────────────────────────
+    function toggleTimerViewMode() {
+        timerCountdownMode = !timerCountdownMode;
+        document.getElementById('timerModeLabel').innerText = timerCountdownMode ? 'Countdown Mode' : 'Elapsed Mode';
+        if (!activeStart) document.getElementById('timeDisplay').innerText = '00:00:00';
+    }
+    function setOffsetChipValue(val, ev) {
+        document.getElementById('transitMinutes').value = val;
+        document.getElementById('approxTimeInput').value = ''; 
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        ev.target.classList.add('active');
+        recalcApproxArrival();
+    }
+
+    function parseApproxTimeInput(str) {
+        if (!str) return null;
+        const clean = str.trim().toUpperCase();
+        const match = clean.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/);
+        if (!match) return null;
+        
+        let hrs = parseInt(match[1]);
+        const mins = parseInt(match[2]);
+        const ampm = match[3];
+
+        if (ampm === 'PM' && hrs < 12) hrs += 12;
+        if (ampm === 'AM' && hrs === 12) hrs = 0;
+        if (hrs > 23 || mins > 59) return null;
+
+        const d = new Date();
+        d.setHours(hrs, mins, 0, 0);
+        return d.getTime();
+    }
+
+    function recalcApproxArrival() {
+        if (activeStart) return; 
+        const textVal = document.getElementById('approxTimeInput').value;
+        const targetLabel = document.getElementById('targetDisplay');
+        
+        if (textVal) {
+            const parsedTs = parseApproxTimeInput(textVal);
+            if (parsedTs) {
+                const calculatedArrival = new Date(parsedTs);
+                targetLabel.innerText = `💡 Calculated Input Arrival: ${calculatedArrival.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            } else {
+                targetLabel.innerText = `⚠️ Type format matches: HH:MM AM/PM`;
+            }
+        } else {
+            const offsetMins = parseFloat(document.getElementById('transitMinutes').value) || 0;
+            const targetTime = new Date(Date.now() - (offsetMins * 60000));
+            targetLabel.innerText = `Punch in backdates log to: ${targetTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
+    }
+
+    // ── Punch workflows control logic interfaces parameters ───────────────────
+    function togglePunch() {
+        if (!activeStart) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        const d = calculateDistance(pos.coords.latitude, pos.coords.longitude, settings.lat, settings.lon);
+                        if (d > settings.radiusKm && !confirm(`⚠️ You are ${d.toFixed(2)} km from the office (limit: ${settings.radiusKm} km). Punch in anyway?`)) return;
+                        executePunchIn();
+                    },
+                    () => { if (confirm('⚠️ Location check failed. Punch in anyway?')) executePunchIn(); },
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
+            } else { executePunchIn(); }
+        } else {
+            const elapsedMs = Date.now() - parseInt(activeStart);
+            if (elapsedMs < 5 * 60 * 1000 && !confirm('⚠️ You clocked in less than 5 minutes ago. Punch out anyway?')) return;
+            executePunchOut();
+        }
+    }
+    
+    function executePunchIn() {
+        const textVal = document.getElementById('approxTimeInput').value;
+        const parsedTs = parseApproxTimeInput(textVal);
+
+        if (textVal && parsedTs) {
+            activeStart = parsedTs.toString();
+        } else {
+            const offset = parseFloat(document.getElementById('transitMinutes').value) || 0;
+            activeStart = (Date.now() - offset * 60000).toString();
+        }
+
+        localStorage.setItem('wfo_active_start', activeStart);
+        document.getElementById('globalUndoBanner').style.display = 'none';
+        startLiveTimer(); 
+        
+        // Match selection to current running date
+        activeSelectedTimelineDateKey = new Date(parseInt(activeStart)).toISOString().split('T')[0];
+        
+        updateUI();
+        showToast('Punched in ✅', 'success');
+    }
+    
+    function executePunchOut() {
+        const addExt = confirm('Add standard 5-minute exit transit time?');
+        const endTs = Date.now() + (addExt ? 5 * 60000 : 0);
+        const startTs = parseInt(activeStart);
+        const dateStr = new Date(startTs).toISOString().split('T')[0];
+        const hours = parseFloat(((endTs - startTs) / 3600000).toFixed(2));
+        lastDeletedUndoCache = {
+            date: dateStr,
+            start: new Date(startTs).toTimeString().substring(0,5),
+            end:   new Date(endTs).toTimeString().substring(0,5),
+            totalHours: hours, activeStartRaw: activeStart
+        };
+        logEntry(dateStr, lastDeletedUndoCache.start, lastDeletedUndoCache.end, hours);
+        clearActiveState();
+        const banner = document.getElementById('globalUndoBanner');
+        banner.style.display = 'flex';
+        setTimeout(() => banner.style.display = 'none', 60000);
+        showToast(`Punched out — ${hours} hrs logged`, hours >= settings.minHours ? 'success' : 'warning');
+    }
+    function executeUndoPunchOut() {
+        if (lastDeletedUndoCache) {
+            db = db.filter(i => i.date !== lastDeletedUndoCache.date);
+            localStorage.setItem('wfo_history', JSON.stringify(db));
+            activeStart = lastDeletedUndoCache.activeStartRaw;
+            localStorage.setItem('wfo_active_start', activeStart);
+            lastDeletedUndoCache = null;
+            document.getElementById('globalUndoBanner').style.display = 'none';
+            startLiveTimer(); updateUI();
+            showToast('Punch-out undone', 'info');
+        }
+    }
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+    function clearActiveState() {
+        clearInterval(liveTimerInterval); activeStart = null;
+        localStorage.removeItem('wfo_active_start');
+        document.getElementById('timeDisplay').innerText = '00:00:00';
+        document.getElementById('liveArrivalDisplay').style.display = 'none';
+        document.title = 'WFO Tracker & Insights'; updateUI();
+        recalcApproxArrival();
+    }
+    function startLiveTimer() {
+        liveTimerInterval = setInterval(() => {
+            const elapsedMs = Date.now() - parseInt(activeStart);
+            const targetMs = settings.minHours * 3600000;
+            let displayMs = timerCountdownMode ? (targetMs - elapsedMs) : elapsedMs;
+            const isOvertime = timerCountdownMode && displayMs < 0;
+            if (isOvertime) displayMs = Math.abs(displayMs);
+            const s = Math.floor((displayMs/1000)%60), m = Math.floor((displayMs/60000)%60), h = Math.floor(displayMs/3600000);
+            document.getElementById('timeDisplay').innerText = `${isOvertime?'+':''}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            document.getElementById('timeDisplay').style.color = elapsedMs >= targetMs ? 'var(--success)' : 'var(--text-color)';
+            if (elapsedMs >= targetMs) {
+                document.title = '✅ (Quota Met!) WFO Tracker';
+            } else {
+                const rem = targetMs - elapsedMs;
+                document.title = `⏳ (${String(Math.floor(rem/3600000)).padStart(2,'0')}h ${String(Math.floor((rem/60000)%60)).padStart(2,'0')}m left) WFO Tracker`;
+            }
+            
+            const arrivalTime = new Date(parseInt(activeStart));
+            const liveArrivalDiv = document.getElementById('liveArrivalDisplay');
+            liveArrivalDiv.innerText = `🏢 Arrived At Office: ${arrivalTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            liveArrivalDiv.style.display = 'block';
+
+            document.getElementById('targetDisplay').innerText = `🎯 ${settings.minHours}hr target: ${new Date(parseInt(activeStart)+targetMs).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+            
+            // Periodically refresh dashboard elements if viewing current active date layout
+            if(activeSelectedTimelineDateKey === new Date().toISOString().split('T')[0]) {
+                renderTimelineLogWindow();
+            }
+        }, 1000);
+    }
+
+    // ── Data CRUD operations ──────────────────────────────────────────────────
+    function logEntry(date, checkIn, checkOut, hours) {
+        db = db.filter(i => i.date !== date);
+        db.push({ date, start: checkIn, end: checkOut, totalHours: hours, isValidWFODay: hours >= settings.minHours });
+        db.sort((a,b) => new Date(b.date) - new Date(a.date));
+        localStorage.setItem('wfo_history', JSON.stringify(db)); 
+        activeSelectedTimelineDateKey = date; // Snap timeline view to modified token row
+        updateUI();
+    }
+    function startInlineEdit(key) { editingRowDateKey = key; updateUI(); }
+    function cancelInlineEdit() { editingRowDateKey = null; updateUI(); }
+    function saveInlineEdit(oldKey) {
+        const row = document.getElementById(`row-${oldKey}`);
+        const nd = row.querySelector('.edit-date').value;
+        const ns = row.querySelector('.edit-start').value;
+        const ne = row.querySelector('.edit-end').value;
+        if (!nd||!ns||!ne) { showToast('All fields required', 'warning'); return; }
+        const diff = (parseFloat(ne.split(':')[0])+parseFloat(ne.split(':')[1])/60) - (parseFloat(ns.split(':')[0])+parseFloat(ns.split(':')[1])/60);
+        if (diff <= 0) { showToast('Exit time must be after entry', 'danger'); return; }
+        db = db.filter(i => i.date !== oldKey);
+        db.push({ date: nd, start: ns, end: ne, totalHours: parseFloat(diff.toFixed(2)), isValidWFODay: diff >= settings.minHours });
+        db.sort((a,b) => new Date(b.date)-new Date(a.date));
+        localStorage.setItem('wfo_history', JSON.stringify(db));
+        editingRowDateKey = null; 
+        activeSelectedTimelineDateKey = nd; 
+        updateUI();
+        showToast('Entry updated', 'success');
+    }
+    function deleteEntry(date) {
+        if (confirm(`Delete record for ${date}?`)) {
+            db = db.filter(i => i.date !== date);
+            localStorage.setItem('wfo_history', JSON.stringify(db)); 
+            if(activeSelectedTimelineDateKey === date) activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0];
+            updateUI();
+            showToast('Entry deleted', 'danger');
+        }
+    }
+    function toggleManualLog() {
+        const p = document.getElementById('manualLogPanel');
+        p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+        document.getElementById('manualDate').value = new Date().toISOString().split('T')[0];
+    }
+    function submitManualLog() {
+        const d = document.getElementById('manualDate').value;
+        const s = document.getElementById('manualIn').value;
+        const e = document.getElementById('manualOut').value;
+        if (!d||!s||!e) { showToast('Fill out all fields', 'warning'); return; }
+        const diff = (parseFloat(e.split(':')[0])+parseFloat(e.split(':')[1])/60) - (parseFloat(s.split(':')[0])+parseFloat(s.split(':')[1])/60);
+        if (diff <= 0) { showToast('Exit time must be after entry', 'danger'); return; }
+        logEntry(d, s, e, parseFloat(diff.toFixed(2)));
+        toggleManualLog();
+        showToast('Manual entry saved', 'success');
+    }
+
+    function exportToCSV() {
+        if (!db.length) { showToast('No data to export', 'warning'); return; }
+        let csv = 'data:text/csv;charset=utf-8,Date,Check In,Check Out,Total Hours,Valid WFO Day\n';
+        db.forEach(r => { csv += `${r.date},${r.start},${r.end},${r.totalHours},${r.isValidWFODay}\n`; });
+        const link = document.createElement('a');
+        link.setAttribute('href', encodeURI(csv));
+        link.setAttribute('download', `WFO_Report_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        showToast('CSV exported', 'success');
+    }
+
+    // --- NEW SELECT DATE INTERFACE CALLBACK HANDLER ---
+    function selectCalendarDate(dateKey) {
+        activeSelectedTimelineDateKey = dateKey;
+        // Strip out highlight markers across alternative arrays elements cells
+        document.querySelectorAll('.calendar-cell').forEach(cell => cell.classList.remove('selected-day'));
+        const activeTargetCell = document.querySelector(`.calendar-cell[data-date='${dateKey}']`);
+        if(activeTargetCell) activeTargetCell.classList.add('selected-day');
+        
+        renderTimelineLogWindow();
+    }
+
+    // --- NEW VERTICAL DELIVERY TIMELINE GENERATION RENDERER ENGINE ---
+    function renderTimelineLogWindow() {
+        const container = document.getElementById('timelineLogViewPanel');
+        const matchRecord = db.find(item => item.date === activeSelectedTimelineDateKey);
+        
+        // Format layout header string configs
+        const parsedDateObj = new Date(activeSelectedTimelineDateKey + "T00:00:00");
+        const formattedFriendlyDate = parsedDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+        if (!matchRecord) {
+            // Treat case where a session is currently ticking live today
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (activeStart && activeSelectedTimelineDateKey === todayStr) {
+                const liveArrival = new Date(parseInt(activeStart));
+                const targetMs = settings.minHours * 3600000;
+                const liveTargetOut = new Date(liveArrival.getTime() + targetMs);
+                
+                container.innerHTML = `
+                    <div class="timeline-date-title">📍 Today (${formattedFriendlyDate})</div>
+                    <div class="timeline-container" style="margin-top:0;">
+                        <div class="timeline-track"></div>
+                        <div class="timeline-step completed">
+                            <div class="timeline-node">✓</div>
+                            <div class="timeline-content">
+                                <div class="timeline-header-lbl">Office Location: Arrived</div>
+                                <div class="timeline-sub-lbl">Punched In at ${liveArrival.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-step">
+                            <div class="timeline-node"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-header-lbl">In-Transit: Quota Limit Target</div>
+                                <div class="timeline-sub-lbl">Will reach 6-hour threshold at ${liveTargetOut.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="timeline-date-title">📅 ${formattedFriendlyDate}</div>
+                <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:2rem 0;">No workspace attendance logs registered for this calendar date.</div>
+            `;
+            return;
+        }
+
+        // Render filled structural timeline matching user's image request
+        const themeStateClass = matchRecord.isValidWFODay ? 'valid-line' : 'invalid-line';
+        const nodeThemeStateClass = matchRecord.isValidWFODay ? 'completed' : 'short-completed';
+
+        container.innerHTML = `
+            <div class="timeline-date-title">📋 ${formattedFriendlyDate}</div>
+            <div class="timeline-container" style="margin-top:0; padding-bottom: 0;">
+                <div class="timeline-track ${themeStateClass}"></div>
+                
+                <div class="timeline-step ${nodeThemeStateClass}">
+                    <div class="timeline-node">✓</div>
+                    <div class="timeline-content">
+                        <div class="timeline-header-lbl">Office Location: Arrived</div>
+                        <div class="timeline-sub-lbl">Office check-in registered at ${matchRecord.start}</div>
+                    </div>
+                </div>
+
+                <div class="timeline-step ${nodeThemeStateClass}">
+                    <div class="timeline-node">✓</div>
+                    <div class="timeline-content">
+                        <div class="timeline-header-lbl">Office Location: Logged Off</div>
+                        <div class="timeline-sub-lbl">Office exit registered at ${matchRecord.end}</div>
+                    </div>
+                </div>
+
+                <div class="timeline-step ${nodeThemeStateClass}">
+                    <div class="timeline-node">✓</div>
+                    <div class="timeline-content">
+                        <div class="timeline-header-lbl">Summary Milestone</div>
+                        <div class="timeline-sub-lbl" style="font-weight: 600; color: ${matchRecord.isValidWFODay ? 'var(--success)' : 'var(--warning)'}">
+                            Logged ${matchRecord.totalHours} hrs total (${matchRecord.isValidWFODay ? '✓ Threshold Cleared' : '⚠️ Left Early'})
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ── Engine UI updates and rendering operations ─────────────────────────────
+    function updateUI() {
+        const actionBtn = document.getElementById('actionBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const offsetWrapper = document.getElementById('offsetWrapper');
+        if (activeStart) {
+            actionBtn.innerText = 'Punch Out'; actionBtn.className = 'btn btn-danger';
+            statusBadge.innerText = 'IN OFFICE'; statusBadge.className = 'status-badge in';
+            offsetWrapper.style.display = 'none';
+        } else {
+            actionBtn.innerText = 'Punch In'; actionBtn.className = 'btn btn-primary';
+            statusBadge.innerText = 'OUT OF OFFICE'; statusBadge.className = 'status-badge out';
+            offsetWrapper.style.display = 'flex';
+        }
+
+        const now = new Date(), cm = now.getMonth(), cy = now.getFullYear();
+        const monthRecs = db.filter(i => { const d = new Date(i.date); return d.getMonth()===cm && d.getFullYear()===cy; });
+        const validMonth = monthRecs.filter(i => i.isValidWFODay).length;
+        const targetMonth = settings.targetDaysPerMonth || settings.targetDaysPerWeek * 4;
+
+        document.getElementById('monthValidDays').innerText = `${validMonth} / ${targetMonth} Days`;
+        document.getElementById('monthTotalHours').innerText = `${monthRecs.reduce((a,c)=>a+c.totalHours,0).toFixed(1)} hrs`;
+
+        buildCalendarGrid('dashboardCalendarGrid', cy, cm, monthRecs);
+        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        document.getElementById('calendarMonthLabel').innerText = `${monthNames[cm]} ${cy}`;
+
+        // Run rate calculations
+        const daysInMonth = new Date(cy, cm+1, 0).getDate();
+        const remainWeeks = Math.max((daysInMonth - now.getDate()) / 7, 0.5);
+        const remainDays = Math.max(targetMonth - validMonth, 0);
+        const runRateEl = document.getElementById('runRateRequired');
+        if (remainDays === 0) { runRateEl.innerText = 'Quota Met! 🎉'; runRateEl.className = 'insight-val text-success'; }
+        else if (remainWeeks <= 0) { runRateEl.innerText = `${remainDays} day${remainDays>1?'s':''} short`; runRateEl.className = 'insight-val text-danger'; }
+        else { const rate = (remainDays/remainWeeks).toFixed(1); runRateEl.innerText = `${rate} days / week`; runRateElement = `insight-val ${rate > settings.targetDaysPerWeek + 0.5 ? 'text-warning' : 'text-success'}`; if (runRateEl) { runRateEl.className = runRateElement; runRateEl.innerText = `${rate} days / week`; } }
+
+        // Weekly target markers badges
+        const weekValid = getValidDaysThisWeek();
+        document.getElementById('currentWeekDays').innerText = `${weekValid} / ${settings.targetDaysPerWeek} valid days`;
+        const daysNeededThisWeek = Math.max(settings.targetDaysPerWeek - weekValid, 0);
+        const badge = document.getElementById('weekRemainingBadge');
+        if (daysNeededThisWeek > 0) {
+            const dowToFri = 5 - (now.getDay() || 7);
+            badge.textContent = dowToFri > 0 ? `${daysNeededThisWeek} more day${daysNeededThisWeek>1?'s':''} needed this week` : (daysNeededThisWeek > 0 ? `Missed target this week` : '');
+            badge.style.display = 'inline-flex';
+            badge.style.background = 'rgba(59,130,246,0.12)';
+            badge.style.borderColor = 'rgba(59,130,246,0.3)';
+            badge.style.color = 'var(--primary)';
+        } else {
+            badge.textContent = '✓ Week target met';
+            badge.style.background = 'rgba(16,185,129,0.12)';
+            badge.style.borderColor = 'rgba(16,185,129,0.3)';
+            badge.style.color = 'var(--success)';
+            badge.style.display = 'inline-flex';
+        }
+
+        document.getElementById('complianceStreak').innerText = `🔥 ${calculateWeeklyStreak()} Weeks`;
+
+        // Update Timeline Sub-panel View Window elements
+        renderTimelineLogWindow();
+
+        // History logs parsing list element matrix table
+        const tbody = document.getElementById('historyTableBody'); tbody.innerHTML = '';
+        if (!db.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No entries yet. Punch in to get started!</td></tr>';
+            return;
+        }
+        db.forEach(item => {
+            const row = document.createElement('tr'); row.id = `row-${item.date}`;
+            if (editingRowDateKey === item.date) {
+                row.innerHTML = `
+                    <td><input type="date" class="inline-edit-input edit-date" value="${item.date}"></td>
+                    <td><input type="time" class="inline-edit-input edit-start" value="${item.start}"></td>
+                    <td><input type="time" class="inline-edit-input edit-end" value="${item.end}"></td>
+                    <td style="color:var(--text-muted);font-style:italic;">Auto-calculated</td>
+                    <td>—</td>
+                    <td><div class="action-link-group">
+                        <button class="action-link action-save" onclick="saveInlineEdit('${item.date}')">Save</button>
+                        <button class="action-link action-cancel" onclick="cancelInlineEdit()">Cancel</button>
+                    </div></td>`;
+            } else {
+                row.innerHTML = `
+                    <td>${item.date}</td>
+                    <td>${item.start}</td>
+                    <td>${item.end}</td>
+                    <td>${item.totalHours} hrs</td>
+                    <td><span class="tag ${item.isValidWFODay?'tag-valid':'tag-invalid'}">${item.isValidWFODay?'Valid':'< '+settings.minHours+'h'}</span></td>
+                    <td><div class="action-link-group">
+                        <button class="action-link action-edit" onclick="startInlineEdit('${item.date}')">Edit</button>
+                        <button class="action-link action-delete" onclick="deleteEntry('${item.date}')">Delete</button>
+                    </div></td>`;
+            }
+            tbody.appendChild(row);
+        });
+    }
+
+    // Calendar painter with click routing integrations handles
+    function buildCalendarGrid(targetId, year, month, logs) {
+        const container = document.getElementById(targetId); container.innerHTML = '';
+        ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(d => {
+            const c = document.createElement('div'); c.className = 'calendar-day-name'; c.innerText = d; container.appendChild(c);
+        });
+        let off = new Date(year, month, 1).getDay() - 1; if (off === -1) off = 6;
+        for (let i=0; i<off; i++) { const c = document.createElement('div'); c.className = 'calendar-cell empty'; container.appendChild(c); }
+        const total = new Date(year, month+1, 0).getDate();
+        for (let d=1; d<=total; d++) {
+            const c = document.createElement('div'); c.className = 'calendar-cell current-month'; c.innerText = d;
+            const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            
+            c.setAttribute('data-date', key);
+            c.onclick = () => selectCalendarDate(key);
+
+            // Preserve active selection highlights boxes border layouts
+            if(key === activeSelectedTimelineDateKey) {
+                c.className += ' selected-day';
+            }
+
+            const log = logs.find(i => i.date === key);
+            if (log) {
+                c.className += log.isValidWFODay ? ' wfo-valid' : ' wfo-invalid';
+                const hint = document.createElement('span'); hint.className = 'calendar-hours-hint'; hint.innerText = `${log.totalHours}h`; c.appendChild(hint);
+            }
+            container.appendChild(c);
+        }
+    }
+
+    function renderYearlyArchive() {
+        const container = document.getElementById('yearlyCalendarContainer'); container.innerHTML = '';
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        months.forEach((name, idx) => {
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<div class="mini-calendar-title">${name}</div><div class="calendar-grid" id="miniCalGrid-${idx}"></div>`;
+            container.appendChild(card);
+            const recs = db.filter(i => { const d = new Date(i.date); return d.getMonth()===idx && d.getFullYear()===selectedActiveYear; });
+            buildCalendarGrid(`miniCalGrid-${idx}`, selectedActiveYear, idx, recs);
+        });
+    }
+
+    function getValidDaysThisWeek() {
+        const today = new Date(), idx = today.getDay();
+        const start = new Date(today); start.setDate(today.getDate() - (idx===0?6:idx-1)); start.setHours(0,0,0,0);
+        return db.filter(i => { const d = new Date(i.date); return d >= start && d <= today && i.isValidWFODay; }).length;
+    }
+    function calculateWeeklyStreak() {
+        if (!db.length) return 0;
+        let streak = 0, offset = 0;
+        while (true) {
+            const target = new Date(); target.setDate(target.getDate() - offset*7);
+            const idx = target.getDay();
+            const start = new Date(target); start.setDate(target.getDate()-(idx===0?6:idx-1)); start.setHours(0,0,0,0);
+            const end = new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999);
+            const tally = db.filter(i => { const d = new Date(i.date); return d>=start && d<=end && i.isValidWFODay; }).length;
+            if (offset === 0) {
+                const dayOfMon = new Date().getDay(), elapsed = dayOfMon===0?7:dayOfMon;
+                if (tally >= settings.targetDaysPerWeek) streak++;
+                else if (tally + (7-elapsed) < settings.targetDaysPerWeek) return 0;
+            } else {
+                if (tally >= settings.targetDaysPerWeek) streak++; else break;
+            }
+            offset++; if (offset > 52) break;
+        }
+        return streak;
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
