@@ -575,8 +575,8 @@
 
         const qrDiv = document.getElementById('qrcode');
         qrDiv.innerHTML = '';
-        const fileUrl = location.href.split('?')[0].split('#')[0];
-        const qrData = fileUrl + '?wfoimport=' + payload;
+        const liveUrl = "https://ujwalkatakam.github.io/Track-o-meter/
+        const qrData = liveUrl + '?wfoimport=' + payload;
 
         if (typeof QRCode !== 'undefined') {
             if (qrData.length > 2953) {
