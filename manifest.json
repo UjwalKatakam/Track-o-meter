@@ -1,0 +1,17 @@
+{
+  "short_name": "WFO Tracker",
+  "name": "WFO Tracker & Insights",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4300/4300058.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#121212",
+  "theme_color": "#1a1a1a",
+  "display": "standalone",
+  "orientation": "portrait"
+}
