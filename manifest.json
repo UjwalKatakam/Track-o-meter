@@ -3,7 +3,7 @@
   "name": "WFO Tracker & Insights",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/4300/4300058.png",
+      "src": "working-man.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
