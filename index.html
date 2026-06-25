@@ -2,59 +2,295 @@
 <html lang="en">
 <head>
     <!-- Link to the Mobile Manifest Configuration -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1a1a1a">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1b1e">
 
-<!-- Register the Service Worker for Offline Execution -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('Service Worker running safely offline.', reg.scope))
-        .catch(err => console.log('Service worker registration failed:', err));
-    });
-  }
-</script>
+    <!-- Register the Service Worker for Offline Execution -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker running safely offline.', reg.scope))
+            .catch(err => console.log('Service worker registration failed:', err));
+        });
+      }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WFO Tracker & Insights</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            --bg-color: #121212;
-            --sidebar-bg: #1a1a1a;
-            --card-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --text-muted: #a0a0a0;
+            --bg-color: #1a1b1e;
+            --sidebar-bg: #222428;
+            --card-bg: #222428;
+            --text-color: #e2e8f0;
+            --text-muted: #718096;
             --primary: #3b82f6;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --border: #333333;
+            --success: #00e676;
+            --warning: #ffb300;
+            --danger: #ff1744;
+            --border: #151619;
             --min-hours: 6;
             --target-days: 3;
+            
+            /* Tactile Skeuomorphic Shadows */
+            --convex-shadow: 4px 4px 8px #111215, -4px -4px 8px #33363c;
+            --concave-shadow: inset 4px 4px 8px #111215, inset -4px -4px 8px #33363c;
+            --glow-success: 0 0 12px rgba(0, 230, 118, 0.6), inset 0 0 4px rgba(0, 230, 118, 0.4);
+            --glow-danger: 0 0 12px rgba(255, 23, 68, 0.6), inset 0 0 4px rgba(255, 23, 68, 0.4);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-color); display: flex; height: 100vh; overflow: hidden; }
 
-        /* Modern Slim-Default Hover Sidebar Style Framework */
-        .sidebar { 
-            width: 65px; 
-            background-color: var(--sidebar-bg); 
-            border-right: 1px solid var(--border); 
+        /* Dashboard Cards as Beveled Cutouts */
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 16px; 
+            padding: 1.5rem; 
+            position: relative;
+            box-shadow: var(--convex-shadow);
+            border: 1px solid rgba(255,255,255,0.03);
+            margin-bottom: 0.5rem;
+        }
+
+        .card-title { 
+            font-size: 0.85rem; 
+            color: var(--text-muted); 
+            margin-bottom: 1.2rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 1px #111;
+        }
+
+        /* Gauge Screen / Display Box */
+        .timer-box { 
+            background: #0d0e10;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--concave-shadow);
+            border: 2px solid #151619;
+            text-align: center;
+        }
+
+        /* Chrono Display Panel */
+        .time-display { 
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 3.5rem; 
+            font-weight: 700; 
+            color: #00e676;
+            text-shadow: 0 0 10px rgba(0, 230, 118, 0.5);
+            background: #050607;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #111215;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.8);
+            text-align: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        /* 3D Tactile Buttons */
+        .btn { 
+            padding: 0.85rem 1.5rem; 
+            font-size: 1rem; 
+            font-weight: 700; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.1s ease; 
+            width: 100%; 
+            text-align: center; 
+            white-space: nowrap;
+            border: 1px solid rgba(0,0,0,0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary { 
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white; 
+            box-shadow: 3px 3px 6px #111215, -2px -2px 5px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.2);
+            text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
+        }
+        .btn-primary:hover { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .btn-primary:active { 
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            box-shadow: inset 3px 3px 6px #111215, inset -2px -2px 5px rgba(255,255,255,0.05);
+            transform: translateY(1px);
+        }
+
+        .btn-danger { 
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white; 
+            box-shadow: 3px 3px 6px #111215, -2px -2px 5px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.2);
+            text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
+        }
+        .btn-danger:hover { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .btn-danger:active { 
+            background: linear-gradient(135deg, #b91c1c, #991b1b);
+            box-shadow: inset 3px 3px 6px #111215, inset -2px -2px 5px rgba(255,255,255,0.05);
+            transform: translateY(1px);
+        }
+
+        .btn-secondary { 
+            background: linear-gradient(135deg, #2d3139, #222428);
+            color: var(--text-color); 
+            box-shadow: 2px 2px 4px #111215, -1px -1px 3px rgba(255,255,255,0.05);
+            border: 1px solid #151619;
+        }
+        .btn-secondary:hover { background: linear-gradient(135deg, #33363c, #2d3139); }
+        .btn-secondary:active {
+            box-shadow: inset 2px 2px 4px #111215;
+        }
+
+        /* Light-Emitting Diode (LED) Status Badges */
+        .status-badge { 
+            padding: 0.4rem 1.2rem; 
+            border-radius: 20px; 
+            font-size: 0.8rem; 
+            font-weight: 700; 
+            margin-bottom: 1rem; 
+            text-transform: uppercase;
+            display: inline-block;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(0,0,0,0.5);
+        }
+        .status-badge.out { 
+            background: #3a0b13; 
+            color: #ff3366; 
+            box-shadow: var(--glow-danger); 
+        }
+        .status-badge.in  { 
+            background: #052e16; 
+            color: #00e676; 
+            box-shadow: var(--glow-success); 
+        }
+
+        /* Skeuomorphic Slider Chips */
+        .offset-container { 
+            margin-top: 1.2rem; 
+            background: #151619; 
+            padding: 1rem; 
+            border-radius: 12px; 
+            box-shadow: var(--concave-shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 270px;
+            font-size: 0.85rem;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .offset-row { display: flex; align-items: center; gap: 0.4rem; width: 100%; justify-content: center; flex-wrap: wrap; }
+        .offset-container input { background: #0d0e10; border: 1px solid #151619; color: #fff; padding: 0.3rem; border-radius: 6px; text-align: center; box-shadow: inset 1px 1px 3px #000; }
+        .input-mins { width: 45px; } 
+        .input-time { width: 85px; font-size: 0.8rem; }
+        .chip-group { display: flex; gap: 0.35rem; margin-top: 0.5rem; }
+        
+        .chip { 
+            background: linear-gradient(135deg, #2d3139, #222428); 
+            border: 1px solid #111215; 
+            padding: 0.4rem 0.8rem; 
+            border-radius: 8px; 
+            font-size: 0.75rem; 
+            cursor: pointer; 
+            color: var(--text-muted); 
+            box-shadow: 2px 2px 4px #0b0c0e;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .chip:hover { color: #fff; }
+        .chip.active { 
+            background: #111215; 
+            color: var(--primary); 
+            box-shadow: inset 2px 2px 4px #000;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        /* Embedded Table Grid Rows */
+        .insight-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 0.8rem 0.75rem; 
+            border-bottom: 1px solid #151619; 
+            align-items: center;
+            background: #1b1c20;
+            margin-bottom: 0.4rem;
+            border-radius: 8px;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.4);
+        }
+        .insight-row:last-child { border-bottom: none; }
+        .insight-val { font-weight: 600; }
+
+        /* Calendar Pressed Grid Panels */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+        .calendar-day-name { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; padding-bottom: 4px; }
+        
+        .calendar-cell { 
+            background: linear-gradient(135deg, #25272d, #1e2024); 
+            border-radius: 8px; 
+            aspect-ratio: 1; 
             display: flex; 
             flex-direction: column; 
-            justify-content: space-between; 
-            padding: 1rem 0.5rem; 
-            flex-shrink: 0; 
-            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-            z-index: 100; 
-            overflow: hidden;
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 2px 2px 4px #111215, -1px -1px 3px rgba(255,255,255,0.02);
+            border: 1px solid #151619;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: transform 0.1s;
         }
-        .sidebar:hover { 
-            width: 260px; 
+        .calendar-cell:hover:not(.empty) { transform: scale(1.05); background: #333; }
+        .calendar-cell.empty { background: transparent; border: none; box-shadow: none; cursor: default; }
+        .calendar-cell.current-month { color: var(--text-color); }
+        
+        .calendar-cell.wfo-valid { 
+            background: #052e16; 
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); 
+            color: #00e676; 
+            border: 1px solid #00e676;
+            font-weight: bold;
         }
+        .calendar-cell.wfo-invalid { 
+            background: #3a1f05; 
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); 
+            color: #ffb300; 
+            border: 1px solid #ffb300;
+        }
+        .calendar-cell.selected-day { 
+            border: 2px solid var(--primary) !important; 
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.6); 
+        }
+        .calendar-hours-hint { font-size: 0.55rem; margin-top: 1px; opacity: 0.8; display: block; font-weight: normal; }
+
+        /* Information Tooltips boxes */
+        .info-icon { 
+            background: #2d3139; 
+            border-radius: 50%; 
+            width: 18px; 
+            height: 18px; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 0.7rem; 
+            color: var(--text-muted); 
+            cursor: help; 
+            box-shadow: 1px 1px 2px #000;
+            position: relative;
+        }
+        .tooltip-box { position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background: #000; color: #e0e0e0; width: 240px; padding: 0.75rem; border-radius: 6px; border: 1px solid #444; font-size: 0.75rem; line-height: 1.35; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease; z-index: 1000; font-weight: normal; }
+        .tooltip-box::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 6px; border-style: solid; border-color: #000 transparent transparent transparent; }
+        .info-icon:hover .tooltip-box { opacity: 1; visibility: visible; }
+
+        /* Framework Layout Mechanics & Routing Sidebar */
+        .sidebar { width: 65px; background-color: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; padding: 1rem 0.5rem; flex-shrink: 0; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100; overflow: hidden; box-shadow: 4px 0 10px rgba(0,0,0,0.3); }
+        .sidebar:hover { width: 260px; }
         .sidebar-brand { display: flex; align-items: center; padding: 0.5rem 0.75rem; margin-bottom: 2rem; gap: 15px; }
         .sidebar-brand h2 { color: #fff; font-size: 1.2rem; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; }
         .sidebar:hover .sidebar-brand h2 { opacity: 1; }
@@ -62,134 +298,56 @@
         
         .nav-menu { display: flex; flex-direction: column; gap: 0.5rem; }
         .nav-item { display: flex; align-items: center; padding: 0.75rem 0.75rem; border-radius: 8px; color: var(--text-muted); text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.2s; gap: 15px; }
-        .nav-item:hover { background: #252525; color: #fff; }
-        .nav-item.active { background: var(--primary); color: #fff; }
+        .nav-item:hover { background: #151619; color: #fff; box-shadow: var(--concave-shadow); }
+        .nav-item.active { background: #151619; color: var(--primary); box-shadow: var(--concave-shadow); border: 1px solid rgba(59,130,246,0.2); }
         .nav-label { opacity: 0; white-space: nowrap; transition: opacity 0.15s ease; pointer-events: none; }
         .sidebar:hover .nav-label { opacity: 1; pointer-events: auto; }
         .sidebar-actions { display: flex; flex-direction: column; gap: 0.5rem; }
         
-        .sidebar-bottom .btn { 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
-            padding: 0.75rem; 
-            overflow: hidden; 
-            max-width: 100%;
-            justify-content: flex-start;
-        }
+        .sidebar-bottom .btn { display: flex; align-items: center; gap: 15px; padding: 0.75rem; overflow: hidden; max-width: 100%; justify-content: flex-start; }
         .btn-text { opacity: 0; white-space: nowrap; transition: opacity 0.15s ease; }
         .sidebar:hover .btn-text { opacity: 1; }
 
-        /* Main Workspace Framework bounding */
         .main-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; position: relative; }
         .main-content { padding: 2rem; overflow-y: auto; flex-grow: 1; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         header { margin-bottom: 2rem; }
-        h1 { font-size: 1.8rem; font-weight: 600; color: #fff; }
+        h1 { font-size: 1.8rem; font-weight: 600; color: #fff; text-shadow: 1px 1px 2px #000; }
 
-        /* Toast notifications stack */
-        .toast-stack { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
-        .toast { background: #2a2a2a; border: 1px solid var(--border); border-left: 4px solid var(--primary); color: var(--text-color); padding: 0.75rem 1.1rem; border-radius: 8px; font-size: 0.9rem; max-width: 340px; pointer-events: all; box-shadow: 0 4px 16px rgba(0,0,0,0.4); animation: slideIn 0.25s ease; display: flex; align-items: center; gap: 0.6rem; }
-        .toast.success { border-left-color: var(--success); }
-        .toast.warning { border-left-color: var(--warning); }
-        .toast.danger  { border-left-color: var(--danger); }
-        .toast-close { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0 0 0.5rem; }
-        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateX(120%); } }
-
-        /* Undo block alert structures */
-        .undo-banner { background-color: rgba(59, 130, 246, 0.2); border: 1px dashed var(--primary); color: #fff; padding: 0.75rem 1rem; border-radius: 8px; display: none; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; }
+        /* Undo Block Banner alert updates */
+        .undo-banner { background-color: rgba(59,130,246,0.1); border: 1px dashed var(--primary); color: #fff; padding: 0.75rem 1rem; border-radius: 12px; display: none; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; box-shadow: var(--concave-shadow); }
         .undo-link { color: var(--primary); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 10px; }
 
-        /* Grid Framework blocks */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
-        .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; position: relative; }
-        .card-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 1.2rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* Operational Timer view components */
-        .timer-box { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; }
-        .status-badge { padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; }
-        .status-badge.out { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
-        .status-badge.in  { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
-        .time-display { font-size: 3.2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 0.25rem; cursor: pointer; transition: color 0.2s; }
-        .time-display:hover { color: var(--primary); }
-        .timer-mode-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
-        .target-display { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; }
-        .arrival-display { font-size: 0.9rem; color: var(--success); font-weight: 600; margin-bottom: 1.5rem; }
-        .btn { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; width: 100%; max-width: 250px; text-align: center; white-space: nowrap; }
-        .btn-primary   { background-color: var(--primary); color: white; }
-        .btn-primary:hover  { background-color: #2563eb; }
-        .btn-danger    { background-color: var(--danger); color: white; }
-        .btn-danger:hover   { background-color: #dc2626; }
-        .btn-secondary { background-color: #333; color: var(--text-color); font-size: 0.85rem; padding: 0.4rem 1rem; width: auto; border: 1px solid #444; }
-        .btn-secondary:hover { background-color: #444; }
-
-        /* Transit parameter offset modifications inputs */
-        .offset-container { margin-top: 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; background: #252525; padding: 0.75rem; border-radius: 8px; width: 100%; max-width: 270px; font-size: 0.85rem; border: 1px solid #333; }
-        .offset-row { display: flex; align-items: center; gap: 0.4rem; width: 100%; justify-content: center; position: relative; flex-wrap: wrap; }
-        .offset-container input { background: #333; border: 1px solid #444; color: #fff; padding: 0.2rem; border-radius: 4px; text-align: center; }
-        .input-mins { width: 45px; }
-        .input-time { width: 85px; font-size: 0.8rem; }
-        .chip-group { display: flex; gap: 0.35rem; margin-top: 0.25rem; }
-        .chip { background: #333; border: 1px solid #444; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
-        .chip:hover, .chip.active { background: #444; color: #fff; border-color: var(--primary); }
-
-        /* Information Tooltips boxes */
-        .info-icon { background: #333; border: 1px solid #444; border-radius: 50%; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; color: var(--text-muted); cursor: help; position: relative; transition: all 0.2s; }
-        .info-icon:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .tooltip-box { position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background: #000; color: #e0e0e0; width: 240px; padding: 0.75rem; border-radius: 6px; border: 1px solid #444; font-size: 0.75rem; line-height: 1.35; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease; z-index: 1000; font-weight: normal; }
-        .tooltip-box::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 6px; border-style: solid; border-color: #000 transparent transparent transparent; }
-        .info-icon:hover .tooltip-box { opacity: 1; visibility: visible; }
-
-        /* Metric Dashboard Insights grid panels rows style properties */
-        .insight-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between;}
-        .insight-row:last-child { border-bottom: none; }
-        .insight-val { font-weight: 600; }
-        .text-success { color: var(--success); }
-        .text-warning { color: var(--warning); }
-        .text-danger  { color: var(--danger); }
-
-        /* Calendar render box elements configurations layout */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-        .calendar-day-name { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; padding-bottom: 4px; }
-        .calendar-cell { background: #252525; border-radius: 4px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; border: 1px solid transparent; color: var(--text-muted); cursor: pointer; transition: transform 0.1s; }
-        .calendar-cell:hover:not(.empty) { transform: scale(1.05); background: #333; }
-        .calendar-cell.empty { background: transparent; border: none; cursor: default; }
-        .calendar-cell.current-month { color: var(--text-color); background: #2a2a2a; }
-        .calendar-cell.wfo-valid { background: rgba(16, 185, 129, 0.2); border-color: var(--success); color: var(--success); font-weight: bold; }
-        .calendar-cell.wfo-invalid { background: rgba(245, 158, 11, 0.2); border-color: var(--warning); color: var(--warning); }
-        .calendar-cell.selected-day { border: 2px solid var(--primary) !important; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
-        .calendar-hours-hint { font-size: 0.55rem; margin-top: 1px; opacity: 0.8; display: block; font-weight: normal; }
-
-        /* ─── NEW Premium Vertical Visual Delivery-Style Timeline Layout ─── */
+        
+        /* Timeline structures mapping layout elements */
         .timeline-container { display: flex; flex-direction: column; padding: 0.5rem 0.5rem 0.5rem 1rem; position: relative; margin-top: 0.5rem; height: 100%; min-height: 140px; justify-content: center; }
-        .timeline-track { position: absolute; top: 1.5rem; bottom: 1.5rem; left: 1.55rem; width: 3px; background: #2d2d2d; transition: background 0.3s; }
-        .timeline-track.valid-line { background: var(--success); }
-        .timeline-track.invalid-line { background: var(--warning); }
+        .timeline-track { position: absolute; top: 1.5rem; bottom: 1.5rem; left: 1.55rem; width: 3px; background: #151619; box-shadow: inset 1px 1px 1px #000; transition: background 0.3s; }
+        .timeline-track.valid-line { background: var(--success); box-shadow: 0 0 8px rgba(0,230,118,0.5); }
+        .timeline-track.invalid-line { background: var(--warning); box-shadow: 0 0 8px rgba(255,179,0,0.5); }
         
         .timeline-step { display: flex; align-items: flex-start; margin-bottom: 1.2rem; position: relative; gap: 15px; }
         .timeline-step:last-child { margin-bottom: 0; }
-        .timeline-node { width: 20px; height: 20px; border-radius: 50%; background: #2a2a2a; border: 2px solid #444; display: flex; align-items: center; justify-content: center; z-index: 2; font-size: 0.65rem; font-weight: bold; transition: all 0.3s; color: transparent; flex-shrink: 0; }
-        .timeline-step.completed .timeline-node { background: #121212; border-color: var(--success); color: var(--success); }
-        .timeline-step.short-completed .timeline-node { background: #121212; border-color: var(--warning); color: var(--warning); }
+        .timeline-node { width: 20px; height: 20px; border-radius: 50%; background: #151619; border: 2px solid #333; display: flex; align-items: center; justify-content: center; z-index: 2; font-size: 0.65rem; box-shadow: var(--convex-shadow); transition: all 0.3s; color: transparent; flex-shrink: 0; }
+        .timeline-step.completed .timeline-node { border-color: #00e676; color: #00e676; box-shadow: var(--glow-success); background: #1a1b1e; }
+        .timeline-step.short-completed .timeline-node { border-color: #ffb300; color: #ffb300; box-shadow: 0 0 10px rgba(255,179,0,0.4); background: #1a1b1e; }
         
         .timeline-content { display: flex; flex-direction: column; }
         .timeline-header-lbl { font-size: 0.95rem; font-weight: 600; color: #fff; }
         .timeline-sub-lbl { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
         .timeline-date-title { font-size: 1.05rem; font-weight: 600; color: var(--primary); margin-bottom: 1rem; text-align: left; text-transform: capitalize; }
 
-        /* Multi Year selector timeline layout block styling */
-        .year-selector-bar { display: flex; gap: 0.5rem; background: #1a1a1a; padding: 0.4rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border); max-width: fit-content; flex-wrap: wrap; }
-        .year-tab-btn { padding: 0.5rem 1.2rem; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); background: transparent; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-        .year-tab-btn:hover { color: #fff; background: #252525; }
-        .year-tab-btn.active { background: #333; color: var(--primary); border: 1px solid #444; }
+        /* Multi Year selection components */
+        .year-selector-bar { display: flex; gap: 0.5rem; background: #151619; padding: 0.4rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: var(--concave-shadow); max-width: fit-content; flex-wrap: wrap; }
+        .year-tab-btn { padding: 0.5rem 1.2rem; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); background: transparent; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .year-tab-btn:hover { color: #fff; background: #222428; }
+        .year-tab-btn.active { background: #2d3139; color: var(--primary); border: 1px solid #111215; box-shadow: var(--convex-shadow); }
         .year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
         .mini-calendar-title { font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.75rem; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
 
-        /* Table */
-        .inline-edit-input { background: #2d2d2d; border: 1px solid #444; color: #fff; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9rem; max-width: 110px; }
+        /* History Table Data Sets elements layout components mapping */
+        .inline-edit-input { background: #0d0e10; border: 1px solid #151619; color: #fff; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9rem; max-width: 110px; box-shadow: inset 1px 1px 3px #000; }
         .inline-edit-input[type="time"] { max-width: 90px; }
         .action-link-group { display: flex; gap: 8px; }
         .action-link { background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
@@ -198,53 +356,70 @@
         .action-save   { color: var(--success); font-weight: bold; }
         .action-cancel { color: var(--text-muted); }
         .table-container { overflow-x: auto; margin-top: 1.5rem; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; }
-        th, td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        th { color: var(--text-muted); font-weight: 500; text-transform: uppercase; font-size: 0.8rem; }
-        .tag { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-        .tag-valid   { background: rgba(16, 119, 129, 0.15); color: var(--success); }
-        .tag-invalid { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0 6px; text-align: left; font-size: 0.95rem; }
+        th, td { padding: 0.75rem 1rem; vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.8rem; }
+        td { background: #1e2024; border-top: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(0,0,0,0.2); }
+        td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+        
+        .tag { padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(0,0,0,0.3); }
+        .tag-valid   { background: #052e16; color: #00e676; }
+        .tag-invalid { background: #3a1f05; color: #ffb300; }
+        
         .flex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-        .manual-panel { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; background: #252525; padding: 0.75rem; border-radius: 8px; border: 1px dashed #444; flex-wrap: wrap; }
-        .manual-panel input { background: #333; border: 1px solid #444; color: #fff; padding: 0.3rem; border-radius: 4px; }
+        .manual-panel { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; background: #151619; padding: 0.75rem; border-radius: 12px; box-shadow: var(--concave-shadow); flex-wrap: wrap; }
+        .manual-panel input { background: #0d0e10; border: 1px solid #222; color: #fff; padding: 0.3rem; border-radius: 6px; }
 
-        /* Configuration systems Modals */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        /* Configuration Systems Modals elements tracking */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal-overlay.open { opacity: 1; pointer-events: all; }
-        .modal-box { background: #1e1e1e; border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 90%; max-width: 460px; }
+        .modal-box { background: var(--card-bg); border: 1px solid #151619; border-radius: 20px; padding: 2rem; width: 90%; max-width: 460px; box-shadow: var(--convex-shadow); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
         .modal-header h3 { font-size: 1.1rem; color: #fff; }
         .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; line-height: 1; }
-        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #151619; }
         .settings-row:last-of-type { border-bottom: none; }
         .settings-label { font-size: 0.9rem; color: var(--text-color); }
         .settings-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
-        .settings-input { background: #2d2d2d; border: 1px solid #444; color: #fff; padding: 0.35rem 0.6rem; border-radius: 6px; width: 70px; text-align: center; font-size: 0.95rem; }
+        .settings-input { background: #0d0e10; border: 1px solid #151619; color: #fff; padding: 0.35rem 0.6rem; border-radius: 8px; width: 70px; text-align: center; font-size: 0.95rem; box-shadow: inset 1px 1px 3px #000; }
 
         .sync-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-        .sync-tab { padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
-        .sync-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .sync-tab { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #151619; background: transparent; color: var(--text-muted); cursor: pointer; box-shadow: 1px 1px 2px #000; }
+        .sync-tab.active { background: #151619; color: #fff; box-shadow: var(--concave-shadow); }
         .sync-panel { display: none; }
         .sync-panel.active { display: block; }
-        #qrcode { display: flex; justify-content: center; margin: 1rem 0; }
-        #qrcode canvas, #qrcode img { border-radius: 8px; border: 8px solid #fff; }
+        
+        #qrcode { display: flex; justify-content: center; margin: 1rem 0; padding: 10px; background: white; border-radius: 12px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); width: fit-content; margin: 1rem auto; }
+        #qrcode canvas, #qrcode img { border-radius: 4px; }
         .qr-hint { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
-        .import-textarea { width: 100%; height: 120px; background: #252525; border: 1px solid var(--border); color: var(--text-color); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.78rem; resize: vertical; }
+        .import-textarea { width: 100%; height: 120px; background: #0d0e10; border: 1px solid #151619; color: var(--text-color); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.78rem; resize: vertical; box-shadow: inset 2px 2px 5px #000; }
         .import-textarea::placeholder { color: #555; }
 
+        /* High fidelity responsive framework components overrides scaling variables */
+        .toast-stack { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+        .toast { background: #222428; border: 1px solid #151619; border-left: 4px solid var(--primary); color: var(--text-color); padding: 0.75rem 1.1rem; border-radius: 12px; font-size: 0.9rem; box-shadow: var(--convex-shadow); pointer-events: all; display: flex; align-items: center; gap: 0.6rem; }
+        .toast.success { border-left-color: var(--success); }
+        .toast.warning { border-left-color: var(--warning); }
+        .toast.danger  { border-left-color: var(--danger); }
+        
+        .toast-close { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0 0 0.5rem; }
+
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
         @media (max-width: 640px) {
             body { flex-direction: column; }
             .sidebar { display: none !important; }
             .main-wrapper { height: calc(100vh - 60px); }
             .main-content { padding: 1rem; }
             .grid { grid-template-columns: 1fr !important; gap: 1rem; }
-            .time-display { font-size: 2.6rem; }
+            .time-display { font-size: 2.8rem; }
             .mobile-nav { display: flex !important; }
             header { padding-left: 0 !important; }
         }
-        .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--sidebar-bg); border-top: 1px solid var(--border); z-index: 200; }
+        .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--sidebar-bg); border-top: 1px solid #151619; z-index: 200; box-shadow: 0 -4px 10px rgba(0,0,0,0.3); }
         .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--text-muted); cursor: pointer; font-size: 0.65rem; transition: color 0.2s; border: none; background: none; }
-        .mobile-nav-item.active { color: var(--primary); }
+        .mobile-nav-item.active { color: var(--primary); text-shadow: 0 0 5px rgba(59,130,246,0.3); }
         .mobile-nav-item span:first-child { font-size: 1.2rem; }
     </style>
 </head>
@@ -439,7 +614,7 @@
                     <div class="card" style="display:flex; flex-direction:column; justify-content:flex-start;">
                         <div class="card-title" style="margin-bottom: 0.5rem;">Daily Status Timeline</div>
                         <div class="timeline-container" id="timelineLogViewPanel">
-                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -505,7 +680,7 @@
     let selectedActiveYear = new Date().getFullYear();
     let timerCountdownMode = false;
     let editingRowDateKey = null;
-    let activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0]; // Tracks target item active display token
+    let activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0];
 
     // ── Settings ─────────────────────────────────────────────────────────────
     let settings = {};
@@ -567,23 +742,56 @@
         });
     });
 
-    // ── Device sync QR arrays matrix encoders handlers ────────────────────────
-    function openSyncModal() {
+    // Helper function to compress data to Base64 (GZIP)
+    async function compressData(string) {
+        const byteArray = new TextEncoder().encode(string);
+        const cs = new CompressionStream('gzip');
+        const writer = cs.writable.getWriter();
+        writer.write(byteArray);
+        writer.close();
+        const arrBuffer = await new Response(cs.readable).arrayBuffer();
+        return btoa(String.fromCharCode(...new Uint8Array(arrBuffer)))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    // Helper function to decompress data from Base64 (GZIP)
+    async function decompressData(base64) {
+        let b64 = base64.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const binaryString = atob(b64);
+        const byteArray = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            byteArray[i] = binaryString.charCodeAt(i);
+        }
+        const ds = new DecompressionStream('gzip');
+        const writer = ds.writable.getWriter();
+        writer.write(byteArray);
+        writer.close();
+        const arrBuffer = await new Response(ds.readable).arrayBuffer();
+        return new TextDecoder().decode(arrBuffer);
+    }
+
+    // ── Device sync QR high compression matrix handlers ────────────────────────
+    async function openSyncModal() {
         openModal('syncModal');
-        const payload = btoa(unescape(encodeURIComponent(JSON.stringify(db))));
+        const jsonString = JSON.stringify(db);
+        let payload = "";
+        
+        try {
+            payload = await compressData(jsonString);
+        } catch (e) {
+            payload = btoa(unescape(encodeURIComponent(jsonString)));
+        }
+        
         document.getElementById('exportDataBox').value = payload;
 
         const qrDiv = document.getElementById('qrcode');
         qrDiv.innerHTML = '';
         const liveUrl = "https://ujwalkatakam.github.io/Track-o-meter/";
-        const qrData = liveUrl + '?wfoimport=' + payload;
+        const qrData = liveUrl + '?wfocompress=' + payload;
 
         if (typeof QRCode !== 'undefined') {
-            if (qrData.length > 2953) {
-                qrDiv.innerHTML = '<div style="color:var(--warning);font-size:0.85rem;text-align:center;padding:1rem;">Dataset too large for QR. Use the copy-paste method below instead.</div>';
-            } else {
-                new QRCode(qrDiv, { text: qrData, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-            }
+            new QRCode(qrDiv, { text: qrData, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
         } else {
             qrDiv.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem;">QR library loading… use the copy-paste method below.</div>';
         }
@@ -600,43 +808,69 @@
             box.select(); document.execCommand('copy'); showToast('Copied!', 'success');
         });
     }
-    function importData() {
+    async function importData() {
         const raw = document.getElementById('importDataBox').value.trim();
         if (!raw) { showToast('Paste your data string first', 'warning'); return; }
-        try {
-            const incoming = JSON.parse(decodeURIComponent(escape(atob(raw))));
-            if (!Array.isArray(incoming)) throw new Error('Invalid format');
-            let added = 0;
-            incoming.forEach(item => {
-                if (!db.find(e => e.date === item.date)) { db.push(item); added++; }
-            });
-            db.sort((a,b) => new Date(b.date) - new Date(a.date));
-            localStorage.setItem('wfo_history', JSON.stringify(db));
-            updateUI(); closeModal('syncModal');
-            showToast(`Imported ${added} new record${added !== 1 ? 's' : ''}`, 'success');
-        } catch(e) { showToast('Invalid data string — check you copied the full text', 'danger'); }
+        await processIncomingPayload(raw);
     }
-    function checkUrlImport() {
+    async function checkUrlImport() {
         const params = new URLSearchParams(location.search);
-        const payload = params.get('wfoimport');
-        if (!payload) return;
+        const compressedPayload = params.get('wfocompress');
+        const legacyPayload = params.get('wfoimport');
+        
+        if (!compressedPayload && !legacyPayload) return;
         history.replaceState({}, '', location.pathname);
+        
+        if (compressedPayload) {
+            await processIncomingPayload(compressedPayload, true);
+        } else if (legacyPayload) {
+            try {
+                const incoming = JSON.parse(decodeURIComponent(escape(atob(legacyPayload))));
+                mergeLogs(incoming);
+                showToast(`📱 Sync complete (Legacy Format)`, 'success', 6000);
+            } catch(e) { showToast('Sync failed', 'danger'); }
+        }
+    }
+
+    async function processIncomingPayload(payload, isUrl = false) {
         try {
-            const incoming = JSON.parse(decodeURIComponent(escape(atob(payload))));
-            if (!Array.isArray(incoming)) return;
-            let added = 0;
-            incoming.forEach(item => {
-                if (!db.find(e => e.date === item.date)) { db.push(item); added++; }
-            });
-            db.sort((a,b) => new Date(b.date) - new Date(a.date));
-            localStorage.setItem('wfo_history', JSON.stringify(db));
-            updateUI();
-            showToast(`📱 Sync complete — ${added} new record${added !== 1 ? 's' : ''} imported`, 'success', 6000);
-        } catch(e) { showToast('QR import failed — data may be corrupted', 'danger'); }
+            let decodedString;
+            if (payload.startsWith('[') || payload.startsWith('%5B')) {
+                decodedString = decodeURIComponent(payload);
+            } else {
+                try {
+                    decodedString = await decompressData(payload);
+                } catch (err) {
+                    decodedString = decodeURIComponent(escape(atob(payload)));
+                }
+            }
+            
+            const incoming = JSON.parse(decodedString);
+            if (!Array.isArray(incoming)) throw new Error('Invalid format');
+            
+            mergeLogs(incoming);
+            closeModal('syncModal');
+            showToast(isUrl ? `📱 Sync complete — Data merged natively!` : `Import successful!`, 'success', 6000);
+        } catch(e) { 
+            showToast('Processing failed — check data integrity', 'danger'); 
+        }
+    }
+
+    function mergeLogs(incomingArray) {
+        let added = 0;
+        incomingArray.forEach(item => {
+            if (!db.find(e => e.date === item.date)) { 
+                db.push(item); 
+                added++; 
+            }
+        });
+        db.sort((a,b) => new Date(b.date) - new Date(a.date));
+        localStorage.setItem('wfo_history', JSON.stringify(db));
+        updateUI();
     }
 
     // ── Application initialization engine functions pipeline ──────────────────
-    function init() {
+    async function init() {
         loadSettings();
         try { db = JSON.parse(localStorage.getItem('wfo_history')) || []; } catch(e) { db = []; }
         activeStart = localStorage.getItem('wfo_active_start');
@@ -649,7 +883,7 @@
             }
         }
         buildYearSelector();
-        checkUrlImport();
+        await checkUrlImport();
         updateUI();
         if (activeStart) startLiveTimer();
         recalcApproxArrival();
@@ -699,6 +933,7 @@
         ev.target.classList.add('active');
         recalcApproxArrival();
     }
+    function setOffsetChip(val, ev) { setOffsetChipValue(val, ev); }
 
     function parseApproxTimeInput(str) {
         if (!str) return null;
@@ -775,7 +1010,6 @@
         document.getElementById('globalUndoBanner').style.display = 'none';
         startLiveTimer(); 
         
-        // Match selection to current running date
         activeSelectedTimelineDateKey = new Date(parseInt(activeStart)).toISOString().split('T')[0];
         
         updateUI();
@@ -850,7 +1084,6 @@
 
             document.getElementById('targetDisplay').innerText = `🎯 ${settings.minHours}hr target: ${new Date(parseInt(activeStart)+targetMs).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
             
-            // Periodically refresh dashboard elements if viewing current active date layout
             if(activeSelectedTimelineDateKey === new Date().toISOString().split('T')[0]) {
                 renderTimelineLogWindow();
             }
@@ -863,7 +1096,7 @@
         db.push({ date, start: checkIn, end: checkOut, totalHours: hours, isValidWFODay: hours >= settings.minHours });
         db.sort((a,b) => new Date(b.date) - new Date(a.date));
         localStorage.setItem('wfo_history', JSON.stringify(db)); 
-        activeSelectedTimelineDateKey = date; // Snap timeline view to modified token row
+        activeSelectedTimelineDateKey = date;
         updateUI();
     }
     function startInlineEdit(key) { editingRowDateKey = key; updateUI(); }
@@ -922,10 +1155,8 @@
         showToast('CSV exported', 'success');
     }
 
-    // --- NEW SELECT DATE INTERFACE CALLBACK HANDLER ---
     function selectCalendarDate(dateKey) {
         activeSelectedTimelineDateKey = dateKey;
-        // Strip out highlight markers across alternative arrays elements cells
         document.querySelectorAll('.calendar-cell').forEach(cell => cell.classList.remove('selected-day'));
         const activeTargetCell = document.querySelector(`.calendar-cell[data-date='${dateKey}']`);
         if(activeTargetCell) activeTargetCell.classList.add('selected-day');
@@ -933,17 +1164,15 @@
         renderTimelineLogWindow();
     }
 
-    // --- NEW VERTICAL DELIVERY TIMELINE GENERATION RENDERER ENGINE ---
     function renderTimelineLogWindow() {
         const container = document.getElementById('timelineLogViewPanel');
+        if (!container) return;
         const matchRecord = db.find(item => item.date === activeSelectedTimelineDateKey);
         
-        // Format layout header string configs
         const parsedDateObj = new Date(activeSelectedTimelineDateKey + "T00:00:00");
         const formattedFriendlyDate = parsedDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
         if (!matchRecord) {
-            // Treat case where a session is currently ticking live today
             const todayStr = new Date().toISOString().split('T')[0];
             if (activeStart && activeSelectedTimelineDateKey === todayStr) {
                 const liveArrival = new Date(parseInt(activeStart));
@@ -980,7 +1209,6 @@
             return;
         }
 
-        // Render filled structural timeline matching user's image request
         const themeStateClass = matchRecord.isValidWFODay ? 'valid-line' : 'invalid-line';
         const nodeThemeStateClass = matchRecord.isValidWFODay ? 'completed' : 'short-completed';
 
@@ -1045,7 +1273,6 @@
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         document.getElementById('calendarMonthLabel').innerText = `${monthNames[cm]} ${cy}`;
 
-        // Run rate calculations
         const daysInMonth = new Date(cy, cm+1, 0).getDate();
         const remainWeeks = Math.max((daysInMonth - now.getDate()) / 7, 0.5);
         const remainDays = Math.max(targetMonth - validMonth, 0);
@@ -1054,7 +1281,6 @@
         else if (remainWeeks <= 0) { runRateEl.innerText = `${remainDays} day${remainDays>1?'s':''} short`; runRateEl.className = 'insight-val text-danger'; }
         else { const rate = (remainDays/remainWeeks).toFixed(1); runRateEl.innerText = `${rate} days / week`; runRateElement = `insight-val ${rate > settings.targetDaysPerWeek + 0.5 ? 'text-warning' : 'text-success'}`; if (runRateEl) { runRateEl.className = runRateElement; runRateEl.innerText = `${rate} days / week`; } }
 
-        // Weekly target markers badges
         const weekValid = getValidDaysThisWeek();
         document.getElementById('currentWeekDays').innerText = `${weekValid} / ${settings.targetDaysPerWeek} valid days`;
         const daysNeededThisWeek = Math.max(settings.targetDaysPerWeek - weekValid, 0);
@@ -1076,10 +1302,8 @@
 
         document.getElementById('complianceStreak').innerText = `🔥 ${calculateWeeklyStreak()} Weeks`;
 
-        // Update Timeline Sub-panel View Window elements
         renderTimelineLogWindow();
 
-        // History logs parsing list element matrix table
         const tbody = document.getElementById('historyTableBody'); tbody.innerHTML = '';
         if (!db.length) {
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No entries yet. Punch in to get started!</td></tr>';
@@ -1114,9 +1338,8 @@
         });
     }
 
-    // Calendar painter with click routing integrations handles
     function buildCalendarGrid(targetId, year, month, logs) {
-        const container = document.getElementById(targetId); container.innerHTML = '';
+        const container = document.getElementById(targetId); if (!container) return; container.innerHTML = '';
         ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(d => {
             const c = document.createElement('div'); c.className = 'calendar-day-name'; c.innerText = d; container.appendChild(c);
         });
@@ -1130,7 +1353,6 @@
             c.setAttribute('data-date', key);
             c.onclick = () => selectCalendarDate(key);
 
-            // Preserve active selection highlights boxes border layouts
             if(key === activeSelectedTimelineDateKey) {
                 c.className += ' selected-day';
             }
