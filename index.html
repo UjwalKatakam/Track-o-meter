@@ -704,6 +704,13 @@
         document.getElementById('settingLat').value = settings.lat;
         document.getElementById('settingLon').value = settings.lon;
         document.getElementById('settingRadius').value = settings.radiusKm;
+        // --- NEW: Load GitHub Sync Credentials ---
+        if (document.getElementById('settingGistId')) {
+            document.getElementById('settingGistId').value = settings.gistId || '';
+        }
+        if (document.getElementById('settingGitHubToken')) {
+            document.getElementById('settingGitHubToken').value = settings.gitToken || '';
+        }
         document.getElementById('policySubtitle').textContent =
             `Complies with ${settings.targetDaysPerWeek} days/week and ${settings.minHours}hr minimum daily thresholds`;
     }
@@ -714,6 +721,10 @@
         settings.lat = parseFloat(document.getElementById('settingLat').value);
         settings.lon = parseFloat(document.getElementById('settingLon').value);
         settings.radiusKm = parseFloat(document.getElementById('settingRadius').value);
+        if (document.getElementById('settingGistId') && document.getElementById('settingGitHubToken')) {
+            settings.gistId = document.getElementById('settingGistId').value.trim();
+            settings.gitToken = document.getElementById('settingGitHubToken').value.trim();
+        }
         localStorage.setItem('wfo_settings', JSON.stringify(settings));
         closeModal('settingsModal');
         db = db.map(item => ({ ...item, isValidWFODay: item.totalHours >= settings.minHours }));
@@ -732,7 +743,75 @@
             showToast('All data cleared', 'danger');
         }
     }
+// --- GitHub Gist Sync Engine ---
+    
+    async function pushToCloud() {
+        const token = document.getElementById('settingGitHubToken').value;
+        const gistId = document.getElementById('settingGistId').value;
+        
+        if (!token || !gistId) {
+            showToast('Configure GitHub Sync in Settings first', 'warning');
+            return;
+        }
 
+        const payload = {
+            files: {
+                "wfo_data.json": { content: JSON.stringify(db) }
+            }
+        };
+
+        showToast('Syncing to cloud...', 'info', 2000);
+
+        try {
+            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                showToast('Backed up to GitHub Gist! ☁️', 'success');
+            } else {
+                throw new Error('API Error');
+            }
+        } catch (e) {
+            showToast('Cloud sync failed. Check token/ID.', 'danger');
+        }
+    }
+
+    async function pullFromCloud() {
+        const token = document.getElementById('settingGitHubToken').value;
+        const gistId = document.getElementById('settingGistId').value;
+        
+        if (!token || !gistId) {
+            showToast('Configure GitHub Sync in Settings first', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) throw new Error('API Error');
+            
+            const data = await response.json();
+            const cloudDataString = data.files['wfo_data.json'].content;
+            const cloudDb = JSON.parse(cloudDataString);
+            
+            mergeLogs(cloudDb); // Uses your existing merge function!
+            showToast('Data downloaded and merged! ⬇️', 'success');
+            
+        } catch (e) {
+            showToast('Failed to pull from cloud.', 'danger');
+        }
+    }
     // ── Toast messages block alert element triggers ──────────────────────────
     function showToast(msg, type = 'info', duration = 4000) {
         const stack = document.getElementById('toastStack');
