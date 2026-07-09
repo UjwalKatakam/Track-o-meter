@@ -385,8 +385,8 @@
         .settings-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
         .settings-input { background: #0d0e10; border: 1px solid #151619; color: #fff; padding: 0.35rem 0.6rem; border-radius: 8px; width: 70px; text-align: center; font-size: 0.95rem; box-shadow: inset 1px 1px 3px #000; }
 
-        .sync-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-        .sync-tab { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #151619; background: transparent; color: var(--text-muted); cursor: pointer; box-shadow: 1px 1px 2px #000; }
+        .sync-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;}
+        .sync-tab { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #151619; background: transparent; color: var(--text-muted); cursor: pointer; box-shadow: 1px 1px 2px #000; flex: 1; text-align: center;}
         .sync-tab.active { background: #151619; color: #fff; box-shadow: var(--concave-shadow); }
         .sync-panel { display: none; }
         .sync-panel.active { display: block; }
@@ -396,6 +396,12 @@
         .qr-hint { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
         .import-textarea { width: 100%; height: 120px; background: #0d0e10; border: 1px solid #151619; color: var(--text-color); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.78rem; resize: vertical; box-shadow: inset 2px 2px 5px #000; }
         .import-textarea::placeholder { color: #555; }
+
+        /* Calendar Header Navigation Elements */
+        .calendar-header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 0.5rem; }
+        .nav-arrow { background: #2d3139; border: 1px solid #111215; color: var(--text-muted); border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 2px 2px 4px #0b0c0e; transition: all 0.2s; font-size: 0.8rem; }
+        .nav-arrow:hover { color: #fff; background: #33363c; }
+        .nav-arrow:active { box-shadow: inset 2px 2px 4px #0b0c0e; }
 
         /* High fidelity responsive framework components overrides scaling variables */
         .toast-stack { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
@@ -467,6 +473,7 @@
                     <input type="number" step="0.1" class="settings-input" id="settingRadius" style="width:100%;" value="0.5">
                 </div>
             </div>
+            
             <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border);">
                 <div style="font-size:0.85rem; color:var(--text-color); font-weight:600; margin-bottom:0.5rem;">☁️ Cloud Sync (GitHub Gist)</div>
                 <div class="settings-row" style="border:none; padding:0.25rem 0;">
@@ -478,7 +485,8 @@
                     <input type="password" class="settings-input" id="settingGitHubToken" style="width:140px; text-align:left;" placeholder="ghp_...">
                 </div>
             </div>
-            <button class="btn btn-primary" style="width:100%; margin-top:0.5rem;" onclick="saveSettings()">Save Settings</button>
+
+            <button class="btn btn-primary" style="width:100%; margin-top:1.5rem;" onclick="saveSettings()">Save Settings</button>
             <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
                 <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Danger zone</div>
                 <button class="btn btn-danger" style="width:100%; font-size:0.85rem; padding:0.5rem;" onclick="clearAllData()">🗑️ Clear All Data</button>
@@ -489,12 +497,13 @@
     <div class="modal-overlay" id="syncModal">
         <div class="modal-box">
             <div class="modal-header">
-                <h3>📱 Sync to Mobile</h3>
+                <h3>📱 Sync & Backup</h3>
                 <button class="modal-close" onclick="closeModal('syncModal')">×</button>
             </div>
             <div class="sync-tabs">
-                <button class="sync-tab active" onclick="switchSyncTab('export', event)">Export (this device)</button>
-                <button class="sync-tab" onclick="switchSyncTab('import', event)">Import (paste data)</button>
+                <button class="sync-tab active" onclick="switchSyncTab('export', event)">QR / Export</button>
+                <button class="sync-tab" onclick="switchSyncTab('import', event)">Import</button>
+                <button class="sync-tab" onclick="switchSyncTab('cloud', event)">Cloud</button>
             </div>
             <div id="syncExport" class="sync-panel active">
                 <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.5;">
@@ -518,6 +527,13 @@
                 <textarea class="import-textarea" id="importDataBox" placeholder="Paste your exported data string here…"></textarea>
                 <button class="btn btn-primary" style="width:100%; margin-top:0.75rem;" onclick="importData()">Import & Merge</button>
             </div>
+            <div id="syncCloud" class="sync-panel">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.5;">
+                    Manually push or pull your database to your secure GitHub Gist. Ensure your credentials are set in the settings menu first.
+                </p>
+                <button class="btn btn-secondary" style="width:100%; margin-bottom:0.75rem; color: var(--success);" onclick="pushToCloud()">☁️ Backup to Cloud</button>
+                <button class="btn btn-secondary" style="width:100%; color: var(--primary);" onclick="pullFromCloud()">⬇️ Restore from Cloud</button>
+            </div>
         </div>
     </div>
 
@@ -533,7 +549,9 @@
             </nav>
         </div>
         <div class="sidebar-bottom sidebar-actions">
-            <button class="btn btn-secondary" onclick="openSyncModal()"><span class="brand-icon">📱</span><span class="btn-text">Sync to Mobile</span></button>
+            <button class="btn btn-secondary" style="color: var(--success);" onclick="pushToCloud()"><span class="brand-icon">☁️</span><span class="btn-text">Backup Cloud</span></button>
+            <button class="btn btn-secondary" style="color: var(--primary);" onclick="pullFromCloud()"><span class="brand-icon">⬇️</span><span class="btn-text">Restore Cloud</span></button>
+            <button class="btn btn-secondary" onclick="openSyncModal()"><span class="brand-icon">📱</span><span class="btn-text">Local Sync</span></button>
             <button class="btn btn-secondary" onclick="exportToCSV()"><span class="brand-icon">💾</span><span class="btn-text">Export CSV</span></button>
             <button class="btn btn-secondary" onclick="openModal('settingsModal')"><span class="brand-icon">⚙️</span><span class="btn-text">Settings</span></button>
         </div>
@@ -618,7 +636,11 @@
 
                 <div class="grid" style="grid-template-columns: 1.2fr 0.8fr;">
                     <div class="card">
-                        <div id="calendarMonthLabel" style="font-weight:600; text-align:center; margin-bottom:1rem;">Month View</div>
+                        <div class="calendar-header-nav">
+                            <button class="nav-arrow" onclick="changeDashboardMonth(-1)">&#10094;</button>
+                            <div id="calendarMonthLabel" style="font-weight:600; text-align:center;">Month View</div>
+                            <button class="nav-arrow" onclick="changeDashboardMonth(1)">&#10095;</button>
+                        </div>
                         <div class="calendar-grid" id="dashboardCalendarGrid"></div>
                     </div>
                     
@@ -692,6 +714,12 @@
     let timerCountdownMode = false;
     let editingRowDateKey = null;
     let activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0];
+    let dashboardNavDate = new Date();
+
+    function changeDashboardMonth(offset) {
+        dashboardNavDate.setMonth(dashboardNavDate.getMonth() + offset);
+        updateUI(); 
+    }
 
     // ── Settings ─────────────────────────────────────────────────────────────
     let settings = {};
@@ -699,21 +727,24 @@
         const defaults = { minHours: 6, targetDaysPerWeek: 3, targetDaysPerMonth: 12, lat: 17.44832, lon: 78.37411, radiusKm: 0.5 };
         try { settings = Object.assign({}, defaults, JSON.parse(localStorage.getItem('wfo_settings') || '{}')); }
         catch(e) { settings = defaults; }
+        
         document.getElementById('settingMinHours').value = settings.minHours;
         document.getElementById('settingTargetDays').value = settings.targetDaysPerWeek;
         document.getElementById('settingLat').value = settings.lat;
         document.getElementById('settingLon').value = settings.lon;
         document.getElementById('settingRadius').value = settings.radiusKm;
-        // --- NEW: Load GitHub Sync Credentials ---
+        
         if (document.getElementById('settingGistId')) {
             document.getElementById('settingGistId').value = settings.gistId || '';
         }
         if (document.getElementById('settingGitHubToken')) {
             document.getElementById('settingGitHubToken').value = settings.gitToken || '';
         }
+        
         document.getElementById('policySubtitle').textContent =
             `Complies with ${settings.targetDaysPerWeek} days/week and ${settings.minHours}hr minimum daily thresholds`;
     }
+
     function saveSettings() {
         settings.minHours = parseFloat(document.getElementById('settingMinHours').value) || 6;
         settings.targetDaysPerWeek = parseInt(document.getElementById('settingTargetDays').value) || 3;
@@ -721,19 +752,25 @@
         settings.lat = parseFloat(document.getElementById('settingLat').value);
         settings.lon = parseFloat(document.getElementById('settingLon').value);
         settings.radiusKm = parseFloat(document.getElementById('settingRadius').value);
+        
         if (document.getElementById('settingGistId') && document.getElementById('settingGitHubToken')) {
             settings.gistId = document.getElementById('settingGistId').value.trim();
             settings.gitToken = document.getElementById('settingGitHubToken').value.trim();
         }
+
         localStorage.setItem('wfo_settings', JSON.stringify(settings));
         closeModal('settingsModal');
+        
         db = db.map(item => ({ ...item, isValidWFODay: item.totalHours >= settings.minHours }));
         localStorage.setItem('wfo_history', JSON.stringify(db));
+        
         document.getElementById('policySubtitle').textContent =
             `Complies with ${settings.targetDaysPerWeek} days/week and ${settings.minHours}hr minimum daily thresholds`;
+            
         updateUI();
         showToast('Settings saved', 'success');
     }
+
     function clearAllData() {
         if (confirm('Delete ALL WFO logs permanently? This cannot be undone.')) {
             localStorage.removeItem('wfo_history');
@@ -743,75 +780,7 @@
             showToast('All data cleared', 'danger');
         }
     }
-// --- GitHub Gist Sync Engine ---
-    
-    async function pushToCloud() {
-        const token = document.getElementById('settingGitHubToken').value;
-        const gistId = document.getElementById('settingGistId').value;
-        
-        if (!token || !gistId) {
-            showToast('Configure GitHub Sync in Settings first', 'warning');
-            return;
-        }
 
-        const payload = {
-            files: {
-                "wfo_data.json": { content: JSON.stringify(db) }
-            }
-        };
-
-        showToast('Syncing to cloud...', 'info', 2000);
-
-        try {
-            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            if (response.ok) {
-                showToast('Backed up to GitHub Gist! ☁️', 'success');
-            } else {
-                throw new Error('API Error');
-            }
-        } catch (e) {
-            showToast('Cloud sync failed. Check token/ID.', 'danger');
-        }
-    }
-
-    async function pullFromCloud() {
-        const token = document.getElementById('settingGitHubToken').value;
-        const gistId = document.getElementById('settingGistId').value;
-        
-        if (!token || !gistId) {
-            showToast('Configure GitHub Sync in Settings first', 'warning');
-            return;
-        }
-
-        try {
-            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            
-            if (!response.ok) throw new Error('API Error');
-            
-            const data = await response.json();
-            const cloudDataString = data.files['wfo_data.json'].content;
-            const cloudDb = JSON.parse(cloudDataString);
-            
-            mergeLogs(cloudDb); // Uses your existing merge function!
-            showToast('Data downloaded and merged! ⬇️', 'success');
-            
-        } catch (e) {
-            showToast('Failed to pull from cloud.', 'danger');
-        }
-    }
     // ── Toast messages block alert element triggers ──────────────────────────
     function showToast(msg, type = 'info', duration = 4000) {
         const stack = document.getElementById('toastStack');
@@ -957,6 +926,76 @@
         db.sort((a,b) => new Date(b.date) - new Date(a.date));
         localStorage.setItem('wfo_history', JSON.stringify(db));
         updateUI();
+    }
+
+    // ── GitHub Gist Sync Engine ───────────────────────────────────────────────
+    async function pushToCloud(isAuto = false) {
+        const token = document.getElementById('settingGitHubToken')?.value || settings.gitToken;
+        const gistId = document.getElementById('settingGistId')?.value || settings.gistId;
+        
+        if (!token || !gistId) {
+            if (!isAuto) showToast('Configure GitHub Sync in Settings first', 'warning');
+            return;
+        }
+
+        const payload = {
+            files: {
+                "wfo_data.json": { content: JSON.stringify(db) }
+            }
+        };
+
+        if (!isAuto) showToast('Syncing to cloud...', 'info', 2000);
+
+        try {
+            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                showToast('Backed up to GitHub Gist! ☁️', 'success');
+            } else {
+                throw new Error('API Error');
+            }
+        } catch (e) {
+            showToast('Cloud sync failed. Check token/ID.', 'danger');
+        }
+    }
+
+    async function pullFromCloud() {
+        const token = document.getElementById('settingGitHubToken')?.value || settings.gitToken;
+        const gistId = document.getElementById('settingGistId')?.value || settings.gistId;
+        
+        if (!token || !gistId) {
+            showToast('Configure GitHub Sync in Settings first', 'warning');
+            return;
+        }
+
+        try {
+            showToast('Downloading data...', 'info', 2000);
+            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) throw new Error('API Error');
+            
+            const data = await response.json();
+            const cloudDataString = data.files['wfo_data.json'].content;
+            const cloudDb = JSON.parse(cloudDataString);
+            
+            mergeLogs(cloudDb);
+            showToast('Data downloaded and merged! ⬇️', 'success');
+            
+        } catch (e) {
+            showToast('Failed to pull from cloud.', 'danger');
+        }
     }
 
     // ── Application initialization engine functions pipeline ──────────────────
@@ -1134,6 +1173,10 @@
             lastDeletedUndoCache = null;
             document.getElementById('globalUndoBanner').style.display = 'none';
             startLiveTimer(); updateUI();
+            
+            // Re-sync cloud if undo is pressed to remove the erroneous log
+            pushToCloud(true);
+            
             showToast('Punch-out undone', 'info');
         }
     }
@@ -1185,10 +1228,16 @@
         db = db.filter(i => i.date !== date);
         db.push({ date, start: checkIn, end: checkOut, totalHours: hours, isValidWFODay: hours >= settings.minHours });
         db.sort((a,b) => new Date(b.date) - new Date(a.date));
+        
         localStorage.setItem('wfo_history', JSON.stringify(db)); 
+        
+        // --- Automatic Cloud Backup Trigger ---
+        pushToCloud(true);
+        
         activeSelectedTimelineDateKey = date;
         updateUI();
     }
+    
     function startInlineEdit(key) { editingRowDateKey = key; updateUI(); }
     function cancelInlineEdit() { editingRowDateKey = null; updateUI(); }
     function saveInlineEdit(oldKey) {
@@ -1202,21 +1251,28 @@
         db = db.filter(i => i.date !== oldKey);
         db.push({ date: nd, start: ns, end: ne, totalHours: parseFloat(diff.toFixed(2)), isValidWFODay: diff >= settings.minHours });
         db.sort((a,b) => new Date(b.date)-new Date(a.date));
+        
         localStorage.setItem('wfo_history', JSON.stringify(db));
+        pushToCloud(true); // Backup edit
+        
         editingRowDateKey = null; 
         activeSelectedTimelineDateKey = nd; 
         updateUI();
         showToast('Entry updated', 'success');
     }
+    
     function deleteEntry(date) {
         if (confirm(`Delete record for ${date}?`)) {
             db = db.filter(i => i.date !== date);
             localStorage.setItem('wfo_history', JSON.stringify(db)); 
+            pushToCloud(true); // Backup deletion
+            
             if(activeSelectedTimelineDateKey === date) activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0];
             updateUI();
             showToast('Entry deleted', 'danger');
         }
     }
+    
     function toggleManualLog() {
         const p = document.getElementById('manualLogPanel');
         p.style.display = p.style.display === 'none' ? 'flex' : 'none';
@@ -1229,6 +1285,7 @@
         if (!d||!s||!e) { showToast('Fill out all fields', 'warning'); return; }
         const diff = (parseFloat(e.split(':')[0])+parseFloat(e.split(':')[1])/60) - (parseFloat(s.split(':')[0])+parseFloat(s.split(':')[1])/60);
         if (diff <= 0) { showToast('Exit time must be after entry', 'danger'); return; }
+        
         logEntry(d, s, e, parseFloat(diff.toFixed(2)));
         toggleManualLog();
         showToast('Manual entry saved', 'success');
@@ -1351,7 +1408,10 @@
             offsetWrapper.style.display = 'flex';
         }
 
-        const now = new Date(), cm = now.getMonth(), cy = now.getFullYear();
+        const now = new Date();
+        const cm = dashboardNavDate.getMonth();
+        const cy = dashboardNavDate.getFullYear();
+        
         const monthRecs = db.filter(i => { const d = new Date(i.date); return d.getMonth()===cm && d.getFullYear()===cy; });
         const validMonth = monthRecs.filter(i => i.isValidWFODay).length;
         const targetMonth = settings.targetDaysPerMonth || settings.targetDaysPerWeek * 4;
