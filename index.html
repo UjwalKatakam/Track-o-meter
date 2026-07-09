@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Link to the Mobile Manifest Configuration -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a1b1e">
 
-    <!-- Register the Service Worker for Offline Execution -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -319,66 +317,7 @@
         .undo-banner { background-color: rgba(59,130,246,0.1); border: 1px dashed var(--primary); color: #fff; padding: 0.75rem 1rem; border-radius: 12px; display: none; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; box-shadow: var(--concave-shadow); }
         .undo-link { color: var(--primary); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 10px; }
 
-        /* Update the existing grid class to stretch cards to equal heights */
-.grid { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    gap: 1.5rem; 
-    margin-bottom: 1.5rem; 
-    align-items: stretch; /* Forces equal heights */
-}
-
-/* Make top-level cards flex containers to align their internal stats */
-.grid > .card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-/* Force the timer box to fill the available space so it matches the right card */
-.timer-box { 
-    background: #0d0e10;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: var(--concave-shadow);
-    border: 2px solid #151619;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    flex-grow: 1; 
-}
-
-/* --- New Styles for the Monthly Data Arrow --- */
-.monthly-nav-arrow {
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.monthly-nav-arrow:hover {
-    color: var(--primary);
-}
-
-.arrow-icon {
-    font-size: 1.2rem;
-    margin-top: 0.2rem;
-    animation: gentle-bounce 2s infinite;
-}
-
-@keyframes gentle-bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(5px); }
-    60% { transform: translateY(3px); }
-}
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
         
         /* Timeline structures mapping layout elements */
         .timeline-container { display: flex; flex-direction: column; padding: 0.5rem 0.5rem 0.5rem 1rem; position: relative; margin-top: 0.5rem; height: 100%; min-height: 140px; justify-content: center; }
@@ -455,6 +394,12 @@
         .qr-hint { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
         .import-textarea { width: 100%; height: 120px; background: #0d0e10; border: 1px solid #151619; color: var(--text-color); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.78rem; resize: vertical; box-shadow: inset 2px 2px 5px #000; }
         .import-textarea::placeholder { color: #555; }
+
+        /* Calendar Header Navigation Elements */
+        .calendar-header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 0.5rem; }
+        .nav-arrow { background: #2d3139; border: 1px solid #111215; color: var(--text-muted); border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 2px 2px 4px #0b0c0e; transition: all 0.2s; font-size: 0.8rem; }
+        .nav-arrow:hover { color: #fff; background: #33363c; }
+        .nav-arrow:active { box-shadow: inset 2px 2px 4px #0b0c0e; }
 
         /* High fidelity responsive framework components overrides scaling variables */
         .toast-stack { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
@@ -626,10 +571,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="monthly-nav-arrow" onclick="switchTab('yearTab')">
-                                <span>Past Month Data</span>
-                                <div class="arrow-icon">▼</div>
-                            </div>
                                 <div class="chip-group">
                                     <div class="chip active" id="defaultChip" onclick="setOffsetChipValue(0, event)">0m</div>
                                     <div class="chip" onclick="setOffsetChipValue(5, event)">5m</div>
@@ -670,7 +611,11 @@
 
                 <div class="grid" style="grid-template-columns: 1.2fr 0.8fr;">
                     <div class="card">
-                        <div id="calendarMonthLabel" style="font-weight:600; text-align:center; margin-bottom:1rem;">Month View</div>
+                        <div class="calendar-header-nav">
+                            <button class="nav-arrow" onclick="changeDashboardMonth(-1)">&#10094;</button>
+                            <div id="calendarMonthLabel" style="font-weight:600; text-align:center;">Month View</div>
+                            <button class="nav-arrow" onclick="changeDashboardMonth(1)">&#10095;</button>
+                        </div>
                         <div class="calendar-grid" id="dashboardCalendarGrid"></div>
                     </div>
                     
@@ -744,6 +689,12 @@
     let timerCountdownMode = false;
     let editingRowDateKey = null;
     let activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0];
+    let dashboardNavDate = new Date();
+
+    function changeDashboardMonth(offset) {
+        dashboardNavDate.setMonth(dashboardNavDate.getMonth() + offset);
+        updateUI(); 
+    }
 
     // ── Settings ─────────────────────────────────────────────────────────────
     let settings = {};
@@ -1324,7 +1275,10 @@
             offsetWrapper.style.display = 'flex';
         }
 
-        const now = new Date(), cm = now.getMonth(), cy = now.getFullYear();
+        const now = new Date();
+        const cm = dashboardNavDate.getMonth();
+        const cy = dashboardNavDate.getFullYear();
+        
         const monthRecs = db.filter(i => { const d = new Date(i.date); return d.getMonth()===cm && d.getFullYear()===cy; });
         const validMonth = monthRecs.filter(i => i.isValidWFODay).length;
         const targetMonth = settings.targetDaysPerMonth || settings.targetDaysPerWeek * 4;
