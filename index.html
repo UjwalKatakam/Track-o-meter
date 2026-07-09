@@ -467,6 +467,17 @@
                     <input type="number" step="0.1" class="settings-input" id="settingRadius" style="width:100%;" value="0.5">
                 </div>
             </div>
+            <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border);">
+                <div style="font-size:0.85rem; color:var(--text-color); font-weight:600; margin-bottom:0.5rem;">☁️ Cloud Sync (GitHub Gist)</div>
+                <div class="settings-row" style="border:none; padding:0.25rem 0;">
+                    <div class="settings-label" style="font-size:0.75rem;">Gist ID</div>
+                    <input type="text" class="settings-input" id="settingGistId" style="width:140px; text-align:left;" placeholder="e.g. 8a7b6c5...">
+                </div>
+                <div class="settings-row" style="border:none; padding:0.25rem 0;">
+                    <div class="settings-label" style="font-size:0.75rem;">Access Token (PAT)</div>
+                    <input type="password" class="settings-input" id="settingGitHubToken" style="width:140px; text-align:left;" placeholder="ghp_...">
+                </div>
+            </div>
             <button class="btn btn-primary" style="width:100%; margin-top:0.5rem;" onclick="saveSettings()">Save Settings</button>
             <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
                 <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Danger zone</div>
