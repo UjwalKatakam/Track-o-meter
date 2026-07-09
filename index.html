@@ -319,7 +319,66 @@
         .undo-banner { background-color: rgba(59,130,246,0.1); border: 1px dashed var(--primary); color: #fff; padding: 0.75rem 1rem; border-radius: 12px; display: none; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; box-shadow: var(--concave-shadow); }
         .undo-link { color: var(--primary); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 10px; }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        /* Update the existing grid class to stretch cards to equal heights */
+.grid { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 1.5rem; 
+    margin-bottom: 1.5rem; 
+    align-items: stretch; /* Forces equal heights */
+}
+
+/* Make top-level cards flex containers to align their internal stats */
+.grid > .card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Force the timer box to fill the available space so it matches the right card */
+.timer-box { 
+    background: #0d0e10;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--concave-shadow);
+    border: 2px solid #151619;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1; 
+}
+
+/* --- New Styles for the Monthly Data Arrow --- */
+.monthly-nav-arrow {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.monthly-nav-arrow:hover {
+    color: var(--primary);
+}
+
+.arrow-icon {
+    font-size: 1.2rem;
+    margin-top: 0.2rem;
+    animation: gentle-bounce 2s infinite;
+}
+
+@keyframes gentle-bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(5px); }
+    60% { transform: translateY(3px); }
+}
         
         /* Timeline structures mapping layout elements */
         .timeline-container { display: flex; flex-direction: column; padding: 0.5rem 0.5rem 0.5rem 1rem; position: relative; margin-top: 0.5rem; height: 100%; min-height: 140px; justify-content: center; }
