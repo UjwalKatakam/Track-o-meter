@@ -1159,19 +1159,29 @@
 
     // ── GitHub Gist Sync Engine ───────────────────────────────────────────────
     async function pushToCloud(isAuto = false) {
-        const token = document.getElementById('settingGitHubToken')?.value || settings.gitToken;
-        const gistId = document.getElementById('settingGistId')?.value || settings.gistId;
+        let token = (document.getElementById('settingGitHubToken')?.value || settings.gitToken || '').trim();
+        let gistId = (document.getElementById('settingGistId')?.value || settings.gistId || '').trim();
         
+        if (gistId.includes('/')) {
+            const parts = gistId.split('/').filter(Boolean);
+            gistId = parts[parts.length - 1];
+        }
+
         if (!token || !gistId) {
             if (!isAuto) showToast('Configure GitHub Sync in Settings first', 'warning');
             return;
         }
 
+        // Strip sensitive auth tokens from setting JSON payload to prevent GitHub secret scanner from revoking PAT
+        const safeSettings = Object.assign({}, settings);
+        delete safeSettings.gitToken;
+        delete safeSettings.gistId;
+
         const payload = {
             files: {
                 "wfo_data.json": { content: JSON.stringify(db) },
                 "wfo_leaves.json": { content: JSON.stringify(leaves) },
-                "wfo_settings.json": { content: JSON.stringify(settings) }
+                "wfo_settings.json": { content: JSON.stringify(safeSettings) }
             }
         };
 
@@ -1190,17 +1200,28 @@
             if (response.ok) {
                 showToast('Backed up check-ins, leaves & settings to GitHub Gist! ☁️', 'success');
             } else {
-                throw new Error('API Error');
+                if (response.status === 401) {
+                    showToast('Sync failed (401 Unauthorized): Token invalid or revoked. Generate new PAT.', 'danger', 7000);
+                } else if (response.status === 404) {
+                    showToast('Sync failed (404 Not Found): Invalid Gist ID or Gist inaccessible.', 'danger', 7000);
+                } else {
+                    showToast(`Sync failed (HTTP ${response.status}). Check credentials.`, 'danger', 5000);
+                }
             }
         } catch (e) {
-            showToast('Cloud sync failed. Check token/ID.', 'danger');
+            showToast('Cloud sync failed. Check network or credentials.', 'danger');
         }
     }
 
     async function pullFromCloud() {
-        const token = document.getElementById('settingGitHubToken')?.value || settings.gitToken;
-        const gistId = document.getElementById('settingGistId')?.value || settings.gistId;
-        
+        let token = (document.getElementById('settingGitHubToken')?.value || settings.gitToken || '').trim();
+        let gistId = (document.getElementById('settingGistId')?.value || settings.gistId || '').trim();
+
+        if (gistId.includes('/')) {
+            const parts = gistId.split('/').filter(Boolean);
+            gistId = parts[parts.length - 1];
+        }
+
         if (!token || !gistId) {
             showToast('Configure GitHub Sync in Settings first', 'warning');
             return;
@@ -1215,13 +1236,24 @@
                 }
             });
             
-            if (!response.ok) throw new Error('API Error');
+            if (!response.ok) {
+                if (response.status === 401) {
+                    showToast('Download failed (401 Unauthorized): PAT Token invalid/revoked.', 'danger', 7000);
+                } else if (response.status === 404) {
+                    showToast('Download failed (404 Not Found): Check Gist ID.', 'danger', 7000);
+                } else {
+                    showToast(`Download failed (HTTP ${response.status}).`, 'danger', 5000);
+                }
+                return;
+            }
             
             const data = await response.json();
             
             if (data.files['wfo_data.json']) {
-                const cloudDb = JSON.parse(data.files['wfo_data.json'].content);
-                mergeLogs(cloudDb);
+                try {
+                    const cloudDb = JSON.parse(data.files['wfo_data.json'].content);
+                    mergeLogs(cloudDb);
+                } catch(err) {}
             }
             if (data.files['wfo_leaves.json']) {
                 try {
@@ -1232,6 +1264,8 @@
             if (data.files['wfo_settings.json']) {
                 try {
                     const cloudSettings = JSON.parse(data.files['wfo_settings.json'].content);
+                    delete cloudSettings.gitToken;
+                    delete cloudSettings.gistId;
                     Object.assign(settings, cloudSettings);
                     localStorage.setItem('wfo_settings', JSON.stringify(settings));
                     loadSettings();
