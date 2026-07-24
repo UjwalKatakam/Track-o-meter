@@ -37,10 +37,24 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Optional: Skip non-GET requests so we don't interfere with POSTs/APIs
+  if (e.request.method !== 'GET') return;
+
   e.respondWith(
-    caches.match(e.request).then(response => {
-      return response || fetch(e.request).catch(() => caches.match('index.html'));
-    })
+    fetch(e.request)
+      .then(networkResponse => {
+        // If the network fetch is successful, update the cache with the fresh file
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseClone));
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // If the network fails (user is offline), fall back to the cache
+        return caches.match(e.request).then(cachedResponse => {
+          return cachedResponse || caches.match('index.html');
+        });
+      })
   );
 });
-
