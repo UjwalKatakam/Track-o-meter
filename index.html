@@ -412,12 +412,30 @@
         
         .toast-close { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0 0 0.5rem; }
 
+        /* Utility text color classes */
+        .text-success { color: var(--success) !important; }
+        .text-warning { color: var(--warning) !important; }
+        .text-danger  { color: var(--danger) !important; }
+
+        /* Badge and Timer Displays */
+        .week-badge {
+            font-size: 0.72rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .timer-mode-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; cursor: pointer; }
+        .target-display { font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-bottom: 0.5rem; }
+        .arrival-display { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
+
         @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
         @media (max-width: 640px) {
             body { flex-direction: column; }
             .sidebar { display: none !important; }
             .main-wrapper { height: calc(100vh - 60px); }
-            .main-content { padding: 1rem; }
+            .main-content { padding: 1rem; padding-bottom: 75px; }
             .grid { grid-template-columns: 1fr !important; gap: 1rem; }
             .time-display { font-size: 2.8rem; }
             .mobile-nav { display: flex !important; }
@@ -613,8 +631,8 @@
                             <span id="monthValidDays" class="insight-val text-success">0 / 12 Days</span>
                         </div>
                         <div class="insight-row">
-                            <span>Total Accumulated Hours:</span>
-                            <span id="monthTotalHours" class="insight-val">0.0 hrs</span>
+                            <span>Total Accumulated Time:</span>
+                            <span id="monthTotalHours" class="insight-val">0h 0m</span>
                         </div>
                         <div class="insight-row">
                             <span>WFO Frequency Run Rate:</span>
@@ -668,7 +686,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Date</th><th>Punch In</th><th>Punch Out</th><th>Total Hours</th><th>Status</th><th>Actions</th>
+                                    <th>Date</th><th>Punch In</th><th>Punch Out</th><th>Total Time</th><th>Status</th><th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="historyTableBody"></tbody>
@@ -716,8 +734,46 @@
     let activeSelectedTimelineDateKey = new Date().toISOString().split('T')[0];
     let dashboardNavDate = new Date();
 
+    function parseLocalDate(dateStr) {
+        if (!dateStr) return new Date();
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        }
+        return new Date(dateStr);
+    }
+
+    function formatHours(decimalHours, style = 'full') {
+        if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours)) {
+            return style === 'compact' ? '0:00 h' : (style === 'short' ? '0h 0m' : '0 h 0 min');
+        }
+        const val = parseFloat(decimalHours);
+        const totalMinutes = Math.round(val * 60);
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+
+        if (style === 'compact') {
+            return `${h}:${String(m).padStart(2, '0')} h`;
+        } else if (style === 'compact-short' || style === 'badge') {
+            if (m === 0) return `${h}h`;
+            if (h === 0) return `${m}m`;
+            return `${h}h ${m}m`;
+        } else if (style === 'short') {
+            if (m === 0) return `${h}h`;
+            if (h === 0) return `${m}m`;
+            return `${h}h ${m}m`;
+        } else {
+            if (m === 0) return `${h} h`;
+            if (h === 0) return `${m} min`;
+            return `${h} h ${m} min`;
+        }
+    }
+
     function changeDashboardMonth(offset) {
         dashboardNavDate.setMonth(dashboardNavDate.getMonth() + offset);
+        const y = dashboardNavDate.getFullYear();
+        const m = String(dashboardNavDate.getMonth() + 1).padStart(2, '0');
+        activeSelectedTimelineDateKey = `${y}-${m}-01`;
         updateUI(); 
     }
 
@@ -742,7 +798,7 @@
         }
         
         document.getElementById('policySubtitle').textContent =
-            `Complies with ${settings.targetDaysPerWeek} days/week and ${settings.minHours}hr minimum daily thresholds`;
+            `Complies with ${settings.targetDaysPerWeek} days/week and ${formatHours(settings.minHours, 'short')} minimum daily thresholds`;
     }
 
     function saveSettings() {
@@ -765,7 +821,7 @@
         localStorage.setItem('wfo_history', JSON.stringify(db));
         
         document.getElementById('policySubtitle').textContent =
-            `Complies with ${settings.targetDaysPerWeek} days/week and ${settings.minHours}hr minimum daily thresholds`;
+            `Complies with ${settings.targetDaysPerWeek} days/week and ${formatHours(settings.minHours, 'short')} minimum daily thresholds`;
             
         updateUI();
         showToast('Settings saved', 'success');
@@ -1162,7 +1218,7 @@
         const banner = document.getElementById('globalUndoBanner');
         banner.style.display = 'flex';
         setTimeout(() => banner.style.display = 'none', 60000);
-        showToast(`Punched out — ${hours} hrs logged`, hours >= settings.minHours ? 'success' : 'warning');
+        showToast(`Punched out — ${formatHours(hours, 'full')} logged`, hours >= settings.minHours ? 'success' : 'warning');
     }
     function executeUndoPunchOut() {
         if (lastDeletedUndoCache) {
@@ -1194,6 +1250,7 @@
         recalcApproxArrival();
     }
     function startLiveTimer() {
+        clearInterval(liveTimerInterval);
         liveTimerInterval = setInterval(() => {
             const elapsedMs = Date.now() - parseInt(activeStart);
             const targetMs = settings.minHours * 3600000;
@@ -1215,7 +1272,7 @@
             liveArrivalDiv.innerText = `🏢 Arrived At Office: ${arrivalTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
             liveArrivalDiv.style.display = 'block';
 
-            document.getElementById('targetDisplay').innerText = `🎯 ${settings.minHours}hr target: ${new Date(parseInt(activeStart)+targetMs).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+            document.getElementById('targetDisplay').innerText = `🎯 ${formatHours(settings.minHours, 'short')} target: ${new Date(parseInt(activeStart)+targetMs).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
             
             if(activeSelectedTimelineDateKey === new Date().toISOString().split('T')[0]) {
                 renderTimelineLogWindow();
@@ -1246,8 +1303,9 @@
         const ns = row.querySelector('.edit-start').value;
         const ne = row.querySelector('.edit-end').value;
         if (!nd||!ns||!ne) { showToast('All fields required', 'warning'); return; }
-        const diff = (parseFloat(ne.split(':')[0])+parseFloat(ne.split(':')[1])/60) - (parseFloat(ns.split(':')[0])+parseFloat(ns.split(':')[1])/60);
-        if (diff <= 0) { showToast('Exit time must be after entry', 'danger'); return; }
+        let diff = (parseFloat(ne.split(':')[0])+parseFloat(ne.split(':')[1])/60) - (parseFloat(ns.split(':')[0])+parseFloat(ns.split(':')[1])/60);
+        if (diff <= 0) diff += 24;
+        if (diff <= 0 || diff > 24) { showToast('Invalid check-in/out times', 'danger'); return; }
         db = db.filter(i => i.date !== oldKey);
         db.push({ date: nd, start: ns, end: ne, totalHours: parseFloat(diff.toFixed(2)), isValidWFODay: diff >= settings.minHours });
         db.sort((a,b) => new Date(b.date)-new Date(a.date));
@@ -1283,8 +1341,9 @@
         const s = document.getElementById('manualIn').value;
         const e = document.getElementById('manualOut').value;
         if (!d||!s||!e) { showToast('Fill out all fields', 'warning'); return; }
-        const diff = (parseFloat(e.split(':')[0])+parseFloat(e.split(':')[1])/60) - (parseFloat(s.split(':')[0])+parseFloat(s.split(':')[1])/60);
-        if (diff <= 0) { showToast('Exit time must be after entry', 'danger'); return; }
+        let diff = (parseFloat(e.split(':')[0])+parseFloat(e.split(':')[1])/60) - (parseFloat(s.split(':')[0])+parseFloat(s.split(':')[1])/60);
+        if (diff <= 0) diff += 24;
+        if (diff <= 0 || diff > 24) { showToast('Invalid check-in/out times', 'danger'); return; }
         
         logEntry(d, s, e, parseFloat(diff.toFixed(2)));
         toggleManualLog();
@@ -1293,8 +1352,8 @@
 
     function exportToCSV() {
         if (!db.length) { showToast('No data to export', 'warning'); return; }
-        let csv = 'data:text/csv;charset=utf-8,Date,Check In,Check Out,Total Hours,Valid WFO Day\n';
-        db.forEach(r => { csv += `${r.date},${r.start},${r.end},${r.totalHours},${r.isValidWFODay}\n`; });
+        let csv = 'data:text/csv;charset=utf-8,Date,Check In,Check Out,Total Hours,Formatted Duration,Valid WFO Day\n';
+        db.forEach(r => { csv += `${r.date},${r.start},${r.end},${r.totalHours},${formatHours(r.totalHours, 'full')},${r.isValidWFODay}\n`; });
         const link = document.createElement('a');
         link.setAttribute('href', encodeURI(csv));
         link.setAttribute('download', `WFO_Report_${new Date().toISOString().split('T')[0]}.csv`);
@@ -1316,7 +1375,7 @@
         if (!container) return;
         const matchRecord = db.find(item => item.date === activeSelectedTimelineDateKey);
         
-        const parsedDateObj = new Date(activeSelectedTimelineDateKey + "T00:00:00");
+        const parsedDateObj = parseLocalDate(activeSelectedTimelineDateKey);
         const formattedFriendlyDate = parsedDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
         if (!matchRecord) {
@@ -1341,7 +1400,7 @@
                             <div class="timeline-node"></div>
                             <div class="timeline-content">
                                 <div class="timeline-header-lbl">In-Transit: Quota Limit Target</div>
-                                <div class="timeline-sub-lbl">Will reach 6-hour threshold at ${liveTargetOut.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                <div class="timeline-sub-lbl">Will reach ${formatHours(settings.minHours, 'full')} target threshold at ${liveTargetOut.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                             </div>
                         </div>
                     </div>
@@ -1385,7 +1444,7 @@
                     <div class="timeline-content">
                         <div class="timeline-header-lbl">Summary Milestone</div>
                         <div class="timeline-sub-lbl" style="font-weight: 600; color: ${matchRecord.isValidWFODay ? 'var(--success)' : 'var(--warning)'}">
-                            Logged ${matchRecord.totalHours} hrs total (${matchRecord.isValidWFODay ? '✓ Threshold Cleared' : '⚠️ Left Early'})
+                            Logged ${formatHours(matchRecord.totalHours, 'full')} total (${matchRecord.isValidWFODay ? '✓ Threshold Cleared' : '⚠️ Left Early'})
                         </div>
                     </div>
                 </div>
@@ -1412,12 +1471,12 @@
         const cm = dashboardNavDate.getMonth();
         const cy = dashboardNavDate.getFullYear();
         
-        const monthRecs = db.filter(i => { const d = new Date(i.date); return d.getMonth()===cm && d.getFullYear()===cy; });
+        const monthRecs = db.filter(i => { const d = parseLocalDate(i.date); return d.getMonth()===cm && d.getFullYear()===cy; });
         const validMonth = monthRecs.filter(i => i.isValidWFODay).length;
         const targetMonth = settings.targetDaysPerMonth || settings.targetDaysPerWeek * 4;
 
         document.getElementById('monthValidDays').innerText = `${validMonth} / ${targetMonth} Days`;
-        document.getElementById('monthTotalHours').innerText = `${monthRecs.reduce((a,c)=>a+c.totalHours,0).toFixed(1)} hrs`;
+        document.getElementById('monthTotalHours').innerText = formatHours(monthRecs.reduce((a,c)=>a+c.totalHours,0), 'short');
 
         buildCalendarGrid('dashboardCalendarGrid', cy, cm, monthRecs);
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1427,9 +1486,17 @@
         const remainWeeks = Math.max((daysInMonth - now.getDate()) / 7, 0.5);
         const remainDays = Math.max(targetMonth - validMonth, 0);
         const runRateEl = document.getElementById('runRateRequired');
-        if (remainDays === 0) { runRateEl.innerText = 'Quota Met! 🎉'; runRateEl.className = 'insight-val text-success'; }
-        else if (remainWeeks <= 0) { runRateEl.innerText = `${remainDays} day${remainDays>1?'s':''} short`; runRateEl.className = 'insight-val text-danger'; }
-        else { const rate = (remainDays/remainWeeks).toFixed(1); runRateEl.innerText = `${rate} days / week`; runRateElement = `insight-val ${rate > settings.targetDaysPerWeek + 0.5 ? 'text-warning' : 'text-success'}`; if (runRateEl) { runRateEl.className = runRateElement; runRateEl.innerText = `${rate} days / week`; } }
+        if (remainDays === 0) { 
+            runRateEl.innerText = 'Quota Met! 🎉'; 
+            runRateEl.className = 'insight-val text-success'; 
+        } else if (remainWeeks <= 0) { 
+            runRateEl.innerText = `${remainDays} day${remainDays>1?'s':''} short`; 
+            runRateEl.className = 'insight-val text-danger'; 
+        } else { 
+            const rate = (remainDays/remainWeeks).toFixed(1); 
+            runRateEl.innerText = `${rate} days / week`; 
+            runRateEl.className = `insight-val ${parseFloat(rate) > settings.targetDaysPerWeek + 0.5 ? 'text-warning' : 'text-success'}`; 
+        }
 
         const weekValid = getValidDaysThisWeek();
         document.getElementById('currentWeekDays').innerText = `${weekValid} / ${settings.targetDaysPerWeek} valid days`;
@@ -1477,8 +1544,8 @@
                     <td>${item.date}</td>
                     <td>${item.start}</td>
                     <td>${item.end}</td>
-                    <td>${item.totalHours} hrs</td>
-                    <td><span class="tag ${item.isValidWFODay?'tag-valid':'tag-invalid'}">${item.isValidWFODay?'Valid':'< '+settings.minHours+'h'}</span></td>
+                    <td>${formatHours(item.totalHours, 'short')}</td>
+                    <td><span class="tag ${item.isValidWFODay?'tag-valid':'tag-invalid'}">${item.isValidWFODay?'Valid':'< '+formatHours(settings.minHours, 'short')}</span></td>
                     <td><div class="action-link-group">
                         <button class="action-link action-edit" onclick="startInlineEdit('${item.date}')">Edit</button>
                         <button class="action-link action-delete" onclick="deleteEntry('${item.date}')">Delete</button>
@@ -1510,7 +1577,7 @@
             const log = logs.find(i => i.date === key);
             if (log) {
                 c.className += log.isValidWFODay ? ' wfo-valid' : ' wfo-invalid';
-                const hint = document.createElement('span'); hint.className = 'calendar-hours-hint'; hint.innerText = `${log.totalHours}h`; c.appendChild(hint);
+                const hint = document.createElement('span'); hint.className = 'calendar-hours-hint'; hint.innerText = formatHours(log.totalHours, 'compact-short'); c.appendChild(hint);
             }
             container.appendChild(c);
         }
@@ -1523,7 +1590,7 @@
             const card = document.createElement('div'); card.className = 'card';
             card.innerHTML = `<div class="mini-calendar-title">${name}</div><div class="calendar-grid" id="miniCalGrid-${idx}"></div>`;
             container.appendChild(card);
-            const recs = db.filter(i => { const d = new Date(i.date); return d.getMonth()===idx && d.getFullYear()===selectedActiveYear; });
+            const recs = db.filter(i => { const d = parseLocalDate(i.date); return d.getMonth()===idx && d.getFullYear()===selectedActiveYear; });
             buildCalendarGrid(`miniCalGrid-${idx}`, selectedActiveYear, idx, recs);
         });
     }
@@ -1531,7 +1598,8 @@
     function getValidDaysThisWeek() {
         const today = new Date(), idx = today.getDay();
         const start = new Date(today); start.setDate(today.getDate() - (idx===0?6:idx-1)); start.setHours(0,0,0,0);
-        return db.filter(i => { const d = new Date(i.date); return d >= start && d <= today && i.isValidWFODay; }).length;
+        const endOfToday = new Date(today); endOfToday.setHours(23,59,59,999);
+        return db.filter(i => { const d = parseLocalDate(i.date); return d >= start && d <= endOfToday && i.isValidWFODay; }).length;
     }
     function calculateWeeklyStreak() {
         if (!db.length) return 0;
@@ -1541,7 +1609,7 @@
             const idx = target.getDay();
             const start = new Date(target); start.setDate(target.getDate()-(idx===0?6:idx-1)); start.setHours(0,0,0,0);
             const end = new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999);
-            const tally = db.filter(i => { const d = new Date(i.date); return d>=start && d<=end && i.isValidWFODay; }).length;
+            const tally = db.filter(i => { const d = parseLocalDate(i.date); return d>=start && d<=end && i.isValidWFODay; }).length;
             if (offset === 0) {
                 const dayOfMon = new Date().getDay(), elapsed = dayOfMon===0?7:dayOfMon;
                 if (tally >= settings.targetDaysPerWeek) streak++;
