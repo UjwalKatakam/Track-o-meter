@@ -1,10 +1,13 @@
-const CACHE_NAME = 'wfo-tracker-v2';
+const CACHE_NAME = 'wfo-tracker-v3';
 const ASSETS = [
   './',
   'index.html',
   'manifest.json',
   'working-man.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+  'https://cdn.jsdelivr.net/npm/chart.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js'
 ];
 
 self.addEventListener('install', e => {
