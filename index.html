@@ -1038,7 +1038,8 @@
     // ── Device sync QR high compression matrix handlers ────────────────────────
     async function openSyncModal() {
         openModal('syncModal');
-        const jsonString = JSON.stringify(db);
+        const bundle = { db: db, leaves: leaves };
+        const jsonString = JSON.stringify(bundle);
         let payload = "";
         
         try {
@@ -1090,7 +1091,11 @@
         } else if (legacyPayload) {
             try {
                 const incoming = JSON.parse(decodeURIComponent(escape(atob(legacyPayload))));
-                mergeLogs(incoming);
+                if (Array.isArray(incoming)) mergeLogs(incoming);
+                else if (incoming && typeof incoming === 'object') {
+                    if (Array.isArray(incoming.db)) mergeLogs(incoming.db);
+                    if (Array.isArray(incoming.leaves)) mergeLeaves(incoming.leaves);
+                }
                 showToast(`📱 Sync complete (Legacy Format)`, 'success', 6000);
             } catch(e) { showToast('Sync failed', 'danger'); }
         }
@@ -1099,7 +1104,7 @@
     async function processIncomingPayload(payload, isUrl = false) {
         try {
             let decodedString;
-            if (payload.startsWith('[') || payload.startsWith('%5B')) {
+            if (payload.startsWith('[') || payload.startsWith('%5B') || payload.startsWith('{') || payload.startsWith('%7B')) {
                 decodedString = decodeURIComponent(payload);
             } else {
                 try {
@@ -1110,9 +1115,15 @@
             }
             
             const incoming = JSON.parse(decodedString);
-            if (!Array.isArray(incoming)) throw new Error('Invalid format');
+            if (Array.isArray(incoming)) {
+                mergeLogs(incoming);
+            } else if (incoming && typeof incoming === 'object') {
+                if (Array.isArray(incoming.db)) mergeLogs(incoming.db);
+                if (Array.isArray(incoming.leaves)) mergeLeaves(incoming.leaves);
+            } else {
+                throw new Error('Invalid format');
+            }
             
-            mergeLogs(incoming);
             closeModal('syncModal');
             showToast(isUrl ? `📱 Sync complete — Data merged natively!` : `Import successful!`, 'success', 6000);
         } catch(e) { 
@@ -1121,6 +1132,7 @@
     }
 
     function mergeLogs(incomingArray) {
+        if (!Array.isArray(incomingArray)) return;
         let added = 0;
         incomingArray.forEach(item => {
             if (!db.find(e => e.date === item.date)) { 
@@ -1130,6 +1142,18 @@
         });
         db.sort((a,b) => new Date(b.date) - new Date(a.date));
         localStorage.setItem('wfo_history', JSON.stringify(db));
+        updateUI();
+    }
+
+    function mergeLeaves(incomingLeaves) {
+        if (!Array.isArray(incomingLeaves) || incomingLeaves.length === 0) return;
+        incomingLeaves.forEach(item => {
+            if (!leaves.find(l => l.id === item.id || l.date === item.date)) {
+                leaves.push(item);
+            }
+        });
+        leaves.sort((a,b) => new Date(b.date) - new Date(a.date));
+        localStorage.setItem('wfo_leaves', JSON.stringify(leaves));
         updateUI();
     }
 
@@ -1145,7 +1169,9 @@
 
         const payload = {
             files: {
-                "wfo_data.json": { content: JSON.stringify(db) }
+                "wfo_data.json": { content: JSON.stringify(db) },
+                "wfo_leaves.json": { content: JSON.stringify(leaves) },
+                "wfo_settings.json": { content: JSON.stringify(settings) }
             }
         };
 
@@ -1162,7 +1188,7 @@
             });
             
             if (response.ok) {
-                showToast('Backed up to GitHub Gist! ☁️', 'success');
+                showToast('Backed up check-ins, leaves & settings to GitHub Gist! ☁️', 'success');
             } else {
                 throw new Error('API Error');
             }
@@ -1192,11 +1218,27 @@
             if (!response.ok) throw new Error('API Error');
             
             const data = await response.json();
-            const cloudDataString = data.files['wfo_data.json'].content;
-            const cloudDb = JSON.parse(cloudDataString);
             
-            mergeLogs(cloudDb);
-            showToast('Data downloaded and merged! ⬇️', 'success');
+            if (data.files['wfo_data.json']) {
+                const cloudDb = JSON.parse(data.files['wfo_data.json'].content);
+                mergeLogs(cloudDb);
+            }
+            if (data.files['wfo_leaves.json']) {
+                try {
+                    const cloudLeaves = JSON.parse(data.files['wfo_leaves.json'].content);
+                    mergeLeaves(cloudLeaves);
+                } catch(err) {}
+            }
+            if (data.files['wfo_settings.json']) {
+                try {
+                    const cloudSettings = JSON.parse(data.files['wfo_settings.json'].content);
+                    Object.assign(settings, cloudSettings);
+                    localStorage.setItem('wfo_settings', JSON.stringify(settings));
+                    loadSettings();
+                } catch(err) {}
+            }
+
+            showToast('Data & leaves downloaded and merged from cloud! ⬇️', 'success');
             
         } catch (e) {
             showToast('Failed to pull from cloud.', 'danger');
@@ -1681,6 +1723,7 @@
     function saveLeaves() {
         localStorage.setItem('wfo_leaves', JSON.stringify(leaves));
         updateUI();
+        if (typeof pushToCloud === 'function') pushToCloud(true);
     }
     function addLeaveEntry() {
         const fromStr = document.getElementById('leaveFromDateInput').value;
