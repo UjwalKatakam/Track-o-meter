@@ -1172,10 +1172,18 @@
             return;
         }
 
-        // Strip sensitive auth tokens from setting JSON payload to prevent GitHub secret scanner from revoking PAT
-        const safeSettings = Object.assign({}, settings);
-        delete safeSettings.gitToken;
-        delete safeSettings.gistId;
+        // Ensure sensitive credentials (PAT token and Gist ID) are NEVER included in Gist JSON files
+        const safeSettings = {
+            minHours: settings.minHours,
+            targetDaysPerWeek: settings.targetDaysPerWeek,
+            targetDaysPerMonth: settings.targetDaysPerMonth,
+            shiftStart: settings.shiftStart || '12:00',
+            lat: settings.lat,
+            lon: settings.lon,
+            radiusKm: settings.radiusKm,
+            employeeName: settings.employeeName || '',
+            notifyOnTarget: settings.notifyOnTarget !== false
+        };
 
         const payload = {
             files: {
